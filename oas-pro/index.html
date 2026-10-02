@@ -16,7 +16,7 @@ main{max-width:1050px;margin:auto;padding:14px}.page{display:none}.page.active{d
 h2,h3{margin:0 0 10px}.tip{font-size:13px;color:var(--mut);line-height:1.45}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.btn{border:0;border-radius:12px;padding:11px 14px;font-weight:800;background:var(--b);color:#fff;cursor:pointer}.btn.alt{background:#eef2ff;color:#1e40af}.btn.ghost{background:#f3f4f6;color:#374151}.btn.red{background:#fee2e2;color:#991b1b}
 input,textarea,select{width:100%;padding:10px 11px;border:1px solid #d1d5db;border-radius:10px;font:inherit;background:#fff}textarea{min-height:96px}.grid{display:grid;gap:10px}.g2{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}.g3{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .stat{background:#f8fafc;border-radius:14px;padding:12px;text-align:center}.stat b{display:block;font-size:25px}.status{padding:10px 12px;border-radius:12px;background:#f3f4f6;margin-top:10px}.ok{color:var(--g)}.warn{color:var(--a)}.bad{color:var(--r)}
-#previewWrap{display:none;background:#111;border-radius:14px;overflow:auto;max-height:65vh}#preview{display:block;max-width:100%;height:auto;margin:auto}
+#previewWrap{display:none;background:#111;border-radius:14px;overflow:auto;max-height:65vh}#preview{display:block;max-width:100%;height:auto;margin:auto}#cameraWrap{display:none;background:#111;border-radius:14px;overflow:hidden;position:relative;margin-top:10px}#cameraVideo{width:100%;display:block}.cameraGuide{position:absolute;inset:5%;border:3px solid #22c55e;border-radius:16px;pointer-events:none;box-shadow:0 0 0 9999px #0003}.cameraHint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:#000b;color:#fff;padding:8px 12px;border-radius:999px;font-weight:800;font-size:13px;white-space:nowrap}
 #verify{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px}.q{border:1px solid var(--line);border-radius:13px;padding:10px}.qh{display:flex;justify-content:space-between;font-weight:900}.choices{display:flex;gap:5px;margin-top:8px}.choices button{border:0;border-radius:9px;padding:7px 9px;background:#f3f4f6}.choices button.sel{background:#dbeafe;outline:2px solid #60a5fa}.badge{font-size:11px;font-weight:900}
 .table{overflow:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;white-space:nowrap}
 .keygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}.keycell{border:1px solid var(--line);border-radius:12px;padding:8px}.keycell .choices{justify-content:space-between}
@@ -64,8 +64,10 @@ input,textarea,select{width:100%;padding:10px 11px;border:1px solid #d1d5db;bord
 <section id="scan" class="page">
  <div class="card"><h2>Scan Pupil Sheet</h2>
   <div class="grid g2"><div><label>Index / register no.</label><input id="studentIndex" placeholder="5-digit index number; can be edited after scan"></div><div><label>Pupil name</label><input id="studentName" placeholder="Optional"></div></div>
-  <div class="row" style="margin-top:10px"><input id="photo" type="file" accept="image/*" style="max-width:420px"><button id="scanBtn" class="btn">Detect & Scan Answers</button><button id="resetScan" class="btn ghost">Reset</button></div>
-  <div id="scanStatus" class="status">Choose a photo of the standard OAS sheet.</div>
+  <div class="row" style="margin-top:10px"><button id="startCamera" class="btn">📷 Live Scan</button><button id="stopCamera" class="btn ghost" style="display:none">Stop Camera</button><input id="photo" type="file" accept="image/*" style="max-width:360px"><button id="scanBtn" class="btn alt">Scan Uploaded Photo</button><button id="resetScan" class="btn ghost">Reset</button></div>
+  <div id="scanStatus" class="status">Tap <b>Live Scan</b> and hold the sheet inside the frame. The app will scan automatically when all four corner markers are visible.</div>
+  <div id="cameraWrap"><video id="cameraVideo" playsinline muted></video><div class="cameraGuide"></div><div class="cameraHint">Hold steady — auto-scan when aligned</div></div>
+  <canvas id="liveFrame" style="display:none"></canvas>
   <div id="previewWrap" style="margin-top:10px"><canvas id="preview"></canvas></div>
  </div>
  <div id="resultCard" class="card" style="display:none"><h3>Verify & Mark</h3>
@@ -159,10 +161,28 @@ function bubbleXY(q,opt){
 }
 
 let img=new Image(), cvCanvas=$('preview'),ctx=cvCanvas.getContext('2d',{willReadFrequently:true});
+let cameraStream=null,cameraTimer=null,markerHits=0,autoBusy=false;
+const video=$('cameraVideo'),liveFrame=$('liveFrame'),liveCtx=liveFrame.getContext('2d',{willReadFrequently:true});
 $('photo').onchange=e=>{let f=e.target.files?.[0];if(!f)return;let r=new FileReader();r.onload=ev=>{img=new Image();img.onload=()=>{let s=Math.min(1,1800/img.width);cvCanvas.width=Math.round(img.width*s);cvCanvas.height=Math.round(img.height*s);ctx.drawImage(img,0,0,cvCanvas.width,cvCanvas.height);$('previewWrap').style.display='block';$('scanStatus').innerHTML='<span class="ok">✓ Photo loaded.</span> Tap Detect & Scan Answers.'};img.src=ev.target.result};r.readAsDataURL(f)}
 $('resetScan').onclick=resetScan;
 $('scanNext').onclick=()=>{resetScan();window.scrollTo({top:0,behavior:'smooth'})}
-function resetScan(){$('photo').value='';$('previewWrap').style.display='none';$('resultCard').style.display='none';$('scanStatus').textContent='Choose a photo of the standard OAS sheet.';workingAnswers={};workingScores={};$('studentName').value='';$('studentIndex').value=''}
+function stopCamera(){
+ if(cameraTimer){clearInterval(cameraTimer);cameraTimer=null}
+ if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null}
+ video.srcObject=null;$('cameraWrap').style.display='none';$('startCamera').style.display='inline-block';$('stopCamera').style.display='none';markerHits=0;autoBusy=false;
+}
+async function startCamera(){
+ if(!currentAss())return alert('Please set up or select an assessment first.');
+ if(!navigator.mediaDevices?.getUserMedia)return alert('Live camera scanning is not supported in this browser.');
+ try{
+  cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+  video.srcObject=cameraStream;await video.play();$('cameraWrap').style.display='block';$('startCamera').style.display='none';$('stopCamera').style.display='inline-block';
+  $('scanStatus').textContent='Point the camera at the whole OAS sheet. Keep all four black corner squares visible.';
+  cameraTimer=setInterval(autoScanFrame,500);
+ }catch(e){$('scanStatus').innerHTML='<span class="bad">Camera could not start: '+escapeHtml(e.message)+'</span>'}
+}
+$('startCamera').onclick=startCamera;$('stopCamera').onclick=stopCamera;
+function resetScan(){stopCamera();$('photo').value='';$('previewWrap').style.display='none';$('resultCard').style.display='none';$('scanStatus').innerHTML='Tap <b>Live Scan</b> and hold the sheet inside the frame. The app will scan automatically when all four corner markers are visible.';workingAnswers={};workingScores={};$('studentName').value='';$('studentIndex').value=''}
 
 function cvLoaded(){return !!(window.cv&&window.cv.Mat)}
 setInterval(()=>{$('cvStatus').innerHTML=cvLoaded()?'<span class="ok">✓ Computer vision ready.</span>':'Loading computer vision…'},700);
@@ -184,13 +204,14 @@ function findMarkers(src){
  for(let c of corners){let best=null,bd=1e99;for(let i=0;i<cand.length;i++){if(used.has(i))continue;let p=cand[i],d=(p.x-c[0])**2+(p.y-c[1])**2;if(d<bd){bd=d;best={i,p}}}if(!best)return null;used.add(best.i);out.push([best.p.x,best.p.y])}
  return out;
 }
-function warpToTemplate(){
- let src=cv.imread(cvCanvas),m=findMarkers(src);if(!m){src.delete();throw new Error('Could not find all four black registration squares. Make sure the entire sheet and all four corner markers are visible.')}
+function warpCanvasToTemplate(sourceCanvas){
+ let src=cv.imread(sourceCanvas),m=findMarkers(src);if(!m){src.delete();throw new Error('Could not find all four black registration squares. Make sure the entire sheet and all four corner markers are visible.')}
  let srcPts=cv.matFromArray(4,1,cv.CV_32FC2,[m[0][0],m[0][1],m[1][0],m[1][1],m[2][0],m[2][1],m[3][0],m[3][1]]);
  let dstPts=cv.matFromArray(4,1,cv.CV_32FC2,[60,60,1140,60,1140,1540,60,1540]);
  let H=cv.getPerspectiveTransform(srcPts,dstPts),dst=new cv.Mat();cv.warpPerspective(src,dst,H,new cv.Size(ref.W,ref.H),cv.INTER_LINEAR,cv.BORDER_CONSTANT,new cv.Scalar(255,255,255,255));
  src.delete();srcPts.delete();dstPts.delete();H.delete();return dst;
 }
+function warpToTemplate(){return warpCanvasToTemplate(cvCanvas)}
 function graphiteScore(gray,cx,cy){
  let rx=16,ry=10,dark=0,mid=0,n=0;
  for(let y=-ry;y<=ry;y++)for(let x=-rx;x<=rx;x++){
@@ -217,7 +238,28 @@ function scanWarped(dst){
  gray.delete();
 }
 
+
+function autoScanFrame(){
+ if(autoBusy||!cvLoaded()||!video.videoWidth||!video.videoHeight)return;
+ let maxW=1200,s=Math.min(1,maxW/video.videoWidth);
+ liveFrame.width=Math.round(video.videoWidth*s);liveFrame.height=Math.round(video.videoHeight*s);
+ liveCtx.drawImage(video,0,0,liveFrame.width,liveFrame.height);
+ let src=null;
+ try{
+   src=cv.imread(liveFrame);let m=findMarkers(src);src.delete();src=null;
+   if(m){markerHits++;$('scanStatus').innerHTML='<span class="ok">✓ Sheet found.</span> Hold steady… '+Math.min(markerHits,3)+'/3';
+     if(markerHits>=3){
+       autoBusy=true;markerHits=0;
+       cvCanvas.width=liveFrame.width;cvCanvas.height=liveFrame.height;ctx.drawImage(liveFrame,0,0);
+       let dst=warpCanvasToTemplate(liveFrame);scanWarped(dst);cv.imshow(cvCanvas,dst);dst.delete();
+       $('previewWrap').style.display='block';renderVerify();stopCamera();
+       $('scanStatus').innerHTML='<span class="ok">✓ Auto-scan complete.</span> Answers have been uploaded below for verification.';
+     }
+   }else{markerHits=0;$('scanStatus').textContent='Move the camera until all four black corner squares are visible.'}
+ }catch(e){if(src)src.delete();markerHits=0}
+}
 $('scanBtn').onclick=()=>{
+ stopCamera();
  if(!currentAss())return alert('Please set up or select an assessment first.');
  if(!img.src)return alert('Choose a pupil sheet photo first.');
  if(!cvLoaded())return alert('Computer vision is still loading. Please wait a few seconds and try again.');
