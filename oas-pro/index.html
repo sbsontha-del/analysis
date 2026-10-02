@@ -23,7 +23,7 @@ input,textarea,select{width:100%;padding:10px 11px;border:1px solid #d1d5db;bord
 .heat{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}.heat div{border-radius:9px;padding:8px 3px;text-align:center;background:#f3f4f6;font-size:12px;font-weight:800}
 #templateSheet{background:white;width:210mm;min-height:297mm;margin:auto;padding:10mm;box-shadow:0 0 0 1px #ddd}
 .marker{position:absolute;width:8mm;height:8mm;background:#000}.sheetWrap{position:relative;width:100%;height:277mm}.mTL{left:0;top:0}.mTR{right:0;top:0}.mBL{left:0;bottom:0}.mBR{right:0;bottom:0}
-.sheetHeader{padding:4mm 12mm 0}.line{border-bottom:1px solid #111;display:inline-block;min-width:48mm;height:7mm}.sheetMeta{display:grid;grid-template-columns:1fr 1fr;gap:4mm;font-size:11pt}.indexBox{margin-top:4mm;border:1px solid #111;padding:3mm;font-size:9pt}.indexCols{display:flex;gap:5mm;margin-top:2mm}.digitCol{display:grid;grid-template-columns:repeat(10,1fr);gap:1.4mm;align-items:center}.oval{display:inline-flex;width:7mm;height:4.2mm;border:1.2px solid #111;border-radius:50%;align-items:center;justify-content:center;font-size:7pt}
+.sheetHeader{padding:4mm 12mm 0}.line{border-bottom:1px solid #111;display:inline-block;min-width:48mm;height:7mm}.sheetMeta{display:grid;grid-template-columns:1fr 1fr;gap:4mm;font-size:11pt}.indexBox{margin-top:4mm;border:1px dashed #777;font-size:8.2pt;display:grid;grid-template-columns:11mm 14mm 1fr}.indexTitle{writing-mode:vertical-rl;text-orientation:upright;letter-spacing:.4mm;font-weight:800;text-align:center;border-right:1px dashed #999;padding:2mm 1mm}.writeCol{border-right:1px dashed #999}.idxHead{height:7mm;display:flex;align-items:center;justify-content:center;font-weight:800;border-bottom:1px dashed #999}.writeCell{height:7mm;border-bottom:1px dashed #bbb}.shadeArea{padding:0 2mm}.shadeHead{height:7mm;display:flex;align-items:center;justify-content:center;font-weight:800;border-bottom:1px dashed #999}.shadeRow{height:7mm;display:grid;grid-template-columns:repeat(10,1fr);gap:1.4mm;align-items:center;border-bottom:1px dashed #bbb}.shadeLetters{height:7mm;display:grid;grid-template-columns:repeat(11,1fr);gap:1mm;align-items:center}.oval{display:inline-flex;width:7mm;height:4.2mm;border:1.2px solid #111;border-radius:50%;align-items:center;justify-content:center;font-size:7pt}
 .qcols{display:grid;grid-template-columns:repeat(3,1fr);gap:7mm;margin:8mm 12mm 0}.qblock{font-size:8.5pt}.sheetQ{display:flex;align-items:center;gap:2.2mm;height:6.7mm}.sheetQ.gap{margin-top:4mm}.qn{width:8mm;text-align:right;font-weight:700}.sheetOpts{display:flex;gap:2mm}
 @media(max-width:700px){nav{top:66px}.heat{grid-template-columns:repeat(6,1fr)}}
 @media print{body *{visibility:hidden}#templateSheet,#templateSheet *{visibility:visible}#templateSheet{position:absolute;left:0;top:0;box-shadow:none;margin:0}header,nav,main>.page:not(#templatePage),#templatePage>.card:first-child{display:none!important}}
@@ -63,7 +63,7 @@ input,textarea,select{width:100%;padding:10px 11px;border:1px solid #d1d5db;bord
 
 <section id="scan" class="page">
  <div class="card"><h2>Scan Pupil Sheet</h2>
-  <div class="grid g2"><div><label>Index / register no.</label><input id="studentIndex" placeholder="Can be edited after scan"></div><div><label>Pupil name</label><input id="studentName" placeholder="Optional"></div></div>
+  <div class="grid g2"><div><label>Index / register no.</label><input id="studentIndex" placeholder="5-digit index number; can be edited after scan"></div><div><label>Pupil name</label><input id="studentName" placeholder="Optional"></div></div>
   <div class="row" style="margin-top:10px"><input id="photo" type="file" accept="image/*" style="max-width:420px"><button id="scanBtn" class="btn">Detect & Scan Answers</button><button id="resetScan" class="btn ghost">Reset</button></div>
   <div id="scanStatus" class="status">Choose a photo of the standard OAS sheet.</div>
   <div id="previewWrap" style="margin-top:10px"><canvas id="preview"></canvas></div>
@@ -89,7 +89,11 @@ input,textarea,select{width:100%;padding:10px 11px;border:1px solid #d1d5db;bord
  <div id="templateSheet"><div class="sheetWrap">
   <div class="marker mTL"></div><div class="marker mTR"></div><div class="marker mBL"></div><div class="marker mBR"></div>
   <div class="sheetHeader"><div class="sheetMeta"><div><b>NAME:</b> <span class="line"></span></div><div><b>DATE:</b> <span class="line" style="min-width:38mm"></span></div><div><b>CLASS:</b> <span class="line"></span></div><div><b>SUBJECT:</b> <span class="line" style="min-width:38mm"></span></div></div>
-  <div class="indexBox"><b>INDEX NUMBER</b><div class="indexCols"><span>Tens</span><div class="digitCol" id="idxTens"></div><span>Ones</span><div class="digitCol" id="idxOnes"></div></div></div></div>
+  <div class="indexBox">
+   <div class="indexTitle">INDEX NUMBER</div>
+   <div class="writeCol"><div class="idxHead">WRITE</div><div id="writeCells"></div></div>
+   <div class="shadeArea"><div class="shadeHead">SHADE OVALS</div><div id="indexShadeRows"></div><div class="shadeLetters" id="indexLetters"></div></div>
+  </div></div>
   <div class="qcols" id="templateQuestions"></div>
  </div></div>
 </section>
@@ -132,7 +136,13 @@ $('saveAss').onclick=()=>{let a=currentAss();if(!a){a=blankAss();assessments.pus
 $('applyKey').onclick=()=>{let a=currentAss();if(!a){a=blankAss();assessments.push(a);currentId=a.id}let v=$('quickKey').value.trim().split(/[\s,;|]+/).filter(Boolean);for(let i=0;i<Math.min(60,v.length);i++)if(/^[1-4]$/.test(v[i]))a.key[i+1]=v[i];persist()}
 
 function buildTemplate(){
- for(let id of ['idxTens','idxOnes']){$(id).innerHTML='';for(let n=0;n<=9;n++)$(id).innerHTML+='<span class="oval">'+n+'</span>'}
+ $('writeCells').innerHTML='';
+ $('indexShadeRows').innerHTML='';
+ for(let r=0;r<5;r++){
+   $('writeCells').innerHTML+='<div class="writeCell"></div>';
+   $('indexShadeRows').innerHTML+='<div class="shadeRow">'+Array.from({length:10},(_,n)=>'<span class="oval">'+n+'</span>').join('')+'</div>';
+ }
+ $('indexLetters').innerHTML=['A','B','C','D','E','F','G','H','I','J','Z'].map(x=>'<span class="oval">'+x+'</span>').join('');
  $('templateQuestions').innerHTML='';
  for(let col=0;col<3;col++){let d=document.createElement('div');d.className='qblock';for(let r=0;r<20;r++){let q=col*20+r+1;d.innerHTML+='<div class="sheetQ '+(r>0&&r%5===0?'gap':'')+'"><span class="qn">'+q+'</span><span class="sheetOpts">'+[1,2,3,4].map(n=>'<span class="oval">'+n+'</span>').join('')+'</span></div>'}$('templateQuestions').appendChild(d)}
 }
