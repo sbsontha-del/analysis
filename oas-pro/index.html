@@ -64,7 +64,7 @@ input,textarea,select{width:100%;padding:10px 11px;border:1px solid #d1d5db;bord
 
 <section id="scan" class="page">
  <div class="card"><h2>Scan Pupil Sheet</h2>
-  <div class="grid g2"><div><label>Index / register no.</label><input id="studentIndex" placeholder="5-digit index number; can be edited after scan"></div><div><label>Pupil name</label><input id="studentName" placeholder="Optional"></div></div>
+  <div class="grid g2"><div><label>Index / register no.</label><input id="studentIndex" placeholder="Index number; 1–5 digits supported"></div><div><label>Pupil name</label><input id="studentName" placeholder="Optional"></div></div>
   <div class="row" style="margin-top:10px"><button id="startCamera" class="btn">📷 Live Scan</button><button id="stopCamera" class="btn ghost" style="display:none">Stop Camera</button><input id="photo" type="file" accept="image/*" style="max-width:360px"><button id="scanBtn" class="btn alt">Scan Uploaded Photo</button><button id="resetScan" class="btn ghost">Reset</button></div>
   <div id="scanStatus" class="status">Tap <b>Live Scan</b> and hold the sheet inside the frame. The app will scan automatically when all four corner markers are visible.</div>
   <div id="indexScanStatus" class="status">Index number: not scanned yet.</div>
@@ -248,7 +248,7 @@ function indexBubbleScore(gray,cx,cy){
 }
 function detectIndexNumber(gray){
  const x0=295,dx=42,ys=[180,218,256,294,332];
- let digits=[],ok=true;
+ let digits=[],uncertain=false,usedRows=0;
  for(let r=0;r<5;r++){
    let ss=[];
    for(let d=0;d<10;d++){
@@ -259,10 +259,20 @@ function detectIndexNumber(gray){
    }
    let ord=[0,1,2,3,4,5,6,7,8,9].sort((a,b)=>ss[b]-ss[a]);
    let top=ss[ord[0]],second=ss[ord[1]],gap=top-second;
-   if(top>=.30&&gap>=.07)digits.push(String(ord[0]));
-   else {digits.push('?');ok=false;}
+
+   // Variable-length index numbers:
+   // clearly shaded row = append digit
+   // clearly blank row = ignore it
+   // ambiguous row = show ? so teacher can check
+   if(top>=.30&&gap>=.07){
+     digits.push(String(ord[0])); usedRows++;
+   }else if(top<.16 || gap<.025){
+     // blank row: deliberately ignored
+   }else{
+     digits.push('?'); uncertain=true; usedRows++;
+   }
  }
- return {value:digits.join(''),ok};
+ return {value:digits.join(''),ok:usedRows>0&&!uncertain,usedRows};
 }
 function scanWarped(dst){
  let gray=new cv.Mat();cv.cvtColor(dst,gray,cv.COLOR_RGBA2GRAY);
@@ -270,7 +280,11 @@ function scanWarped(dst){
  if(idx.ok){
    $('studentIndex').value=idx.value;
    $('indexScanStatus').innerHTML='<span class="ok">✓ Index number detected: <b>'+idx.value+'</b></span>';
+ }else if(!idx.usedRows){
+   $('studentIndex').value='';
+   $('indexScanStatus').innerHTML='<span class="warn">⚠ No index number detected.</span> You can enter it manually above.';
  }else{
+   $('studentIndex').value=idx.value.replace(/\?/g,'');
    $('indexScanStatus').innerHTML='<span class="warn">⚠ Index number needs checking: <b>'+idx.value+'</b></span> You can edit it above before saving.';
  }
  let all=[];
