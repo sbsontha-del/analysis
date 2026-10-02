@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>OAS Analysis</title><style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f7fb;color:#182230}header{background:#fff;border-bottom:1px solid #e5e7eb;padding:16px;position:sticky;top:0;z-index:5}header b{font-size:20px}main{max-width:900px;margin:auto;padding:14px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:16px;margin-bottom:14px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn,label.btn{display:inline-block;border:0;border-radius:12px;padding:12px 15px;font-weight:700;font-size:15px;cursor:pointer;background:#2563eb;color:#fff}.alt{background:#eef2ff!important;color:#1e40af!important}.ghost{background:#f3f4f6!important;color:#374151!important}input[type=file]{display:block!important}.tip{font-size:13px;color:#667085;line-height:1.45}.status{padding:10px 12px;border-radius:12px;background:#f3f4f6;margin-top:10px;font-size:14px}#wrap{display:none;overflow:auto;background:#111;border-radius:14px;max-height:68vh;margin-top:10px}canvas{display:block;max-width:100%;height:auto;margin:auto;touch-action:none}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}.q{border:1px solid #e5e7eb;border-radius:12px;padding:9px}.qh{display:flex;justify-content:space-between;font-weight:800}.choices{display:flex;gap:4px;margin-top:7px}.choices button{padding:7px 9px;border:0;border-radius:9px;background:#f3f4f6}.choices .sel{background:#dbeafe;outline:2px solid #60a5fa}.flag{color:#d97706;font-size:11px}.ok{color:#16a34a}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}.m{background:#f8fafc;border-radius:12px;padding:10px;text-align:center}.m strong{display:block;font-size:22px}textarea{width:100%;min-height:120px}.keyrow{border:1px solid #e5e7eb;border-radius:12px;padding:9px}.keyrow input{width:100%;margin-top:7px;padding:7px;border:1px solid #d1d5db;border-radius:8px}.scorebox{background:#ecfdf5;border:1px solid #a7f3d0;border-radius:14px;padding:12px;margin-bottom:12px}.wrong{color:#dc2626}.correct{color:#16a34a}
-</style></head><body><header><b>OAS Analysis</b><div class="tip"><b>Build 28</b> · group-aware graphite scanner</div></header><main>
-<section class="card"><h3>Answer Key & Learning Objectives</h3><p class="tip">Enter the correct option (1–4) and an optional LO for each question. The key is saved on this device.</p><div class="actions"><button id="toggleKey" class="btn alt">Set / Edit Answer Key</button><button id="clearKey" class="btn ghost">Clear Key</button></div><div id="keyPanel" style="display:none;margin-top:12px"><div id="keyGrid" class="grid"></div><div class="actions" style="margin-top:12px"><button id="saveKey" class="btn">Save Answer Key</button></div></div><div id="keyStatus" class="status">No answer key saved yet.</div></section><section class="card"><h3>1. Scan pupil sheet</h3><div class="actions"><input id="pick" type="file" accept="image/*" style="font-size:16px;max-width:100%;margin:6px 0 12px"></div><p id="msg" class="tip">No photo selected.</p><div id="wrap"><canvas id="cv"></canvas></div><div id="st" class="status">Upload a pupil sheet.</div><div class="actions" style="margin-top:10px"><button id="undo" class="btn ghost" disabled style="display:none">Undo corner</button><button id="scan" class="btn">🔍 Detect & Scan Answers</button><button id="reset" class="btn alt">Reset</button></div><p class="tip"><b>Build 28:</b> Tap <b>Choose File</b>, select or take a photo of the pupil sheet, and wait for the preview to appear. Then tap <b>Detect & Scan Answers</b>.</p></section>
+</style></head><body><header><b>OAS Analysis</b><div class="tip"><b>Build 29</b> · self-aligning graphite scanner</div></header><main>
+<section class="card"><h3>Answer Key & Learning Objectives</h3><p class="tip">Enter the correct option (1–4) and an optional LO for each question. The key is saved on this device.</p><div class="actions"><button id="toggleKey" class="btn alt">Set / Edit Answer Key</button><button id="clearKey" class="btn ghost">Clear Key</button></div><div id="keyPanel" style="display:none;margin-top:12px"><div id="keyGrid" class="grid"></div><div class="actions" style="margin-top:12px"><button id="saveKey" class="btn">Save Answer Key</button></div></div><div id="keyStatus" class="status">No answer key saved yet.</div></section><section class="card"><h3>1. Scan pupil sheet</h3><div class="actions"><input id="pick" type="file" accept="image/*" style="font-size:16px;max-width:100%;margin:6px 0 12px"></div><p id="msg" class="tip">No photo selected.</p><div id="wrap"><canvas id="cv"></canvas></div><div id="st" class="status">Upload a pupil sheet.</div><div class="actions" style="margin-top:10px"><button id="undo" class="btn ghost" disabled style="display:none">Undo corner</button><button id="scan" class="btn">🔍 Detect & Scan Answers</button><button id="reset" class="btn alt">Reset</button></div><p class="tip"><b>Build 29:</b> Tap <b>Choose File</b>, select or take a photo of the pupil sheet, and wait for the preview to appear. Then tap <b>Detect & Scan Answers</b>.</p></section>
 <section id="rescard" class="card" style="display:none"><h3>2. Verify & Mark</h3><div id="indexResult" class="status">Index number: detecting…</div><div id="markSummary"></div><div class="metrics"><div class="m"><strong id="dn">0</strong>Detected</div><div class="m"><strong id="rn">0</strong>Review</div><div class="m"><strong id="bn">0</strong>Blank</div></div><div id="res" class="grid"></div><details><summary>Debug scores</summary><textarea id="dbg" readonly></textarea></details></section>
 </main><script>
 let KEY=JSON.parse(localStorage.getItem('oasKey')||'{}'), LOS=JSON.parse(localStorage.getItem('oasLO')||'{}');
@@ -40,72 +40,15 @@ function cvScan(){
  src.delete();gray.delete();for(let q=1;q<=60;q++){if(!(q in ans)){ans[q]='?';scores[q]=[0,0,0,0]}}indexResult.textContent='Index number: automatic detection will be added after answer detection is validated';render();st.innerHTML='<span class=ok>✓ Computer-vision scan complete.</span>';return true}
 function calibratedCanvasScan(){
  let w=canvas.width,h=canvas.height,data=ctx.getImageData(0,0,w,h).data,ans2={},scores2={};
-
- // Build 28: fixed question rows, respecting the real 5-question groups.
- // The OAS form is NOT evenly spaced: 1–5, gap, 6–10, gap, 11–15, gap, 16–20.
- // So every question now has its own stored Y position. No row is inferred from the previous one.
- const TEMPLATE_H=1498;
- const yRows=[
-   [414,452,489,526,565, 623,662,701,741,780, 845,886,928,970,1012, 1079,1122,1164,1208,1252],
-   [421,460,497,535,573, 630,670,708,747,786, 851,893,935,976,1019, 1086,1128,1171,1215,1258],
-   [428,467,504,542,580, 637,676,715,754,793, 858,900,942,984,1026, 1093,1136,1178,1222,1265]
- ];
- const xCols=[
-   [.218,.255,.292,.329],
-   [.493,.530,.567,.604],
-   [.765,.802,.839,.876]
- ];
-
- function graphite(cx,cy){
-   let rx=Math.max(6,Math.round(w*.012)),ry=Math.max(5,Math.round(h*.0072));
-   let dark=0,mid=0,total=0;
-   for(let yy=-ry;yy<=ry;yy++)for(let xx=-rx;xx<=rx;xx++){
-     let r=(xx*xx)/(rx*rx)+(yy*yy)/(ry*ry);
-     if(r<.20 || r>.90) continue; // ignore printed digit in centre + outside border
-     let X=Math.round(cx+xx),Y=Math.round(cy+yy);
-     if(X<0||Y<0||X>=w||Y>=h) continue;
-     let k=(Y*w+X)*4,v=.299*data[k]+.587*data[k+1]+.114*data[k+2];
-     total++;
-     if(v<145) dark++;
-     else if(v<190) mid++;
-   }
-   return total ? (dark + .45*mid)/total : 0;
- }
-
- // Search a very small vertical window around each known row.
- // This handles tiny camera tilt/cropping differences without ever "jumping" across the group gaps.
- function bestAt(xNorm,yNorm){
-   let best=0;
-   let maxShift=Math.max(2,Math.round(h*.0045)); // about ±6–8 px on common phone photos
-   for(let dy=-maxShift;dy<=maxShift;dy+=2){
-     best=Math.max(best,graphite(xNorm*w,yNorm*h+dy));
-   }
-   return best;
- }
-
- for(let bi=0;bi<3;bi++){
-   for(let ri=0;ri<20;ri++){
-     let q=bi*20+ri+1;
-     let yNorm=yRows[bi][ri]/TEMPLATE_H;
-     let ss=xCols[bi].map(x=>bestAt(x,yNorm));
-     scores2[q]=ss;
-
-     let ord=[0,1,2,3].sort((a,z)=>ss[z]-ss[a]);
-     let best=ss[ord[0]],second=ss[ord[1]],gap=best-second;
-
-     // One clearly graphite-filled bubble wins; otherwise the row is blank.
-     if(best>=.105 && gap>=.028) ans2[q]=String(ord[0]+1);
-     else if(best>=.145 && gap>=.016) ans2[q]=String(ord[0]+1);
-     else ans2[q]='-';
-   }
- }
-
- ans=ans2;
- scores=scores2;
- indexResult.textContent='Index number: detection pending';
- render();
- st.innerHTML='<span class=ok>✓ Build 28 group-aware graphite scan complete.</span>';
- return true;
+ const TH=1498;
+ const Y=[[414,452,489,526,565,623,662,701,741,780,845,886,928,970,1012,1079,1122,1164,1208,1252],[421,460,497,535,573,630,670,708,747,786,851,893,935,976,1019,1086,1128,1171,1215,1258],[428,467,504,542,580,637,676,715,754,793,858,900,942,984,1026,1093,1136,1178,1222,1265]];
+ const X=[[.218,.255,.292,.329],[.493,.530,.567,.604],[.765,.802,.839,.876]];
+ function L(x,y){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=w||y>=h)return 255;let k=(y*w+x)*4;return .299*data[k]+.587*data[k+1]+.114*data[k+2]}
+ function S(cx,cy){let rx=Math.max(6,Math.round(w*.012)),ry=Math.max(5,Math.round(h*.0072)),s=0,n=0;for(let yy=-ry;yy<=ry;yy+=2)for(let xx=-rx;xx<=rx;xx+=2){let r=(xx*xx)/(rx*rx)+(yy*yy)/(ry*ry);if(r>.95)continue;let v=L(cx+xx,cy+yy);if(v<225)s+=225-v;n++}return n?s/n:0}
+ function G(cx,cy){let rx=Math.max(6,Math.round(w*.012)),ry=Math.max(5,Math.round(h*.0072)),d=0,m=0,n=0;for(let yy=-ry;yy<=ry;yy++)for(let xx=-rx;xx<=rx;xx++){let r=(xx*xx)/(rx*rx)+(yy*yy)/(ry*ry);if(r<.20||r>.90)continue;let v=L(cx+xx,cy+yy);n++;if(v<145)d++;else if(v<190)m++}return n?(d+.45*m)/n:0}
+ function shift(bi,g){let bd=0,bs=-1,max=Math.max(8,Math.round(h*.018));for(let dy=-max;dy<=max;dy+=2){let s=0;for(let j=0;j<5;j++){let ri=g*5+j,y=Y[bi][ri]/TH*h+dy;for(let x of X[bi])s+=S(x*w,y)}if(s>bs){bs=s;bd=dy}}return bd}
+ for(let bi=0;bi<3;bi++){let sh=[0,1,2,3].map(g=>shift(bi,g));for(let ri=0;ri<20;ri++){let q=bi*20+ri+1,g=Math.floor(ri/5),y=Y[bi][ri]/TH*h+sh[g],ss=X[bi].map(x=>{let z=0;for(let dy=-4;dy<=4;dy+=2)z=Math.max(z,G(x*w,y+dy));return z});scores2[q]=ss;let ord=[0,1,2,3].sort((u,v)=>ss[v]-ss[u]),best=ss[ord[0]],second=ss[ord[1]],gap=best-second;if(best>=.105&&gap>=.028)ans2[q]=String(ord[0]+1);else if(best>=.145&&gap>=.016)ans2[q]=String(ord[0]+1);else ans2[q]='-'}}
+ ans=ans2;scores=scores2;indexResult.textContent='Index number: detection pending';render();st.innerHTML='<span class=ok>✓ Build 29 self-aligned graphite scan complete.</span>';return true;
 }
 function fixedTemplateScan(){
  return calibratedCanvasScan()
