@@ -26,7 +26,8 @@ input,textarea,select{width:100%;padding:10px 11px;border:1px solid #d1d5db;bord
 .sheetHeader{padding:4mm 12mm 0}.line{border-bottom:1px solid #111;display:inline-block;min-width:48mm;height:7mm}.sheetMeta{display:grid;grid-template-columns:1fr 1fr;gap:4mm;font-size:11pt}.indexBox{margin-top:4mm;border:1px dashed #777;font-size:8.2pt;display:grid;grid-template-columns:11mm 14mm 1fr}.indexTitle{writing-mode:vertical-rl;text-orientation:upright;letter-spacing:.4mm;font-weight:800;text-align:center;border-right:1px dashed #999;padding:2mm 1mm}.writeCol{border-right:1px dashed #999}.idxHead{height:7mm;display:flex;align-items:center;justify-content:center;font-weight:800;border-bottom:1px dashed #999}.writeCell{height:7mm;border-bottom:1px dashed #bbb}.shadeArea{padding:0 2mm}.shadeHead{height:7mm;display:flex;align-items:center;justify-content:center;font-weight:800;border-bottom:1px dashed #999}.shadeRow{height:7mm;display:grid;grid-template-columns:repeat(10,1fr);gap:1.4mm;align-items:center;border-bottom:1px dashed #bbb}.shadeLetters{height:7mm;display:grid;grid-template-columns:repeat(11,1fr);gap:1mm;align-items:center}.oval{display:inline-flex;width:7mm;height:4.2mm;border:1.2px solid #111;border-radius:50%;align-items:center;justify-content:center;font-size:7pt}
 .qcols{display:grid;grid-template-columns:repeat(3,1fr);gap:7mm;margin:8mm 12mm 0}.qblock{font-size:8.5pt}.sheetQ{display:flex;align-items:center;gap:2.2mm;height:6.7mm}.sheetQ.gap{margin-top:4mm}.qn{width:8mm;text-align:right;font-weight:700}.sheetOpts{display:flex;gap:2mm}
 @media(max-width:700px){nav{top:66px}.heat{grid-template-columns:repeat(6,1fr)}}
-@media print{body *{visibility:hidden}#templateSheet,#templateSheet *{visibility:visible}#templateSheet{position:absolute;left:0;top:0;box-shadow:none;margin:0}header,nav,main>.page:not(#templatePage),#templatePage>.card:first-child{display:none!important}}
+#slipModal{display:none;position:fixed;inset:0;background:#0008;z-index:50;padding:18px;overflow:auto}#slipModal.open{display:block}#resultSlip{background:white;max-width:760px;margin:20px auto;padding:28px;border-radius:18px}.slipHead{display:flex;justify-content:space-between;gap:18px;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:14px}.slipScore{text-align:right}.slipScore b{font-size:30px}.loTable{width:100%;border-collapse:collapse;margin-top:10px}.loTable th,.loTable td{border:1px solid #d1d5db;padding:8px;white-space:normal}.slipFooter{margin-top:22px;display:grid;grid-template-columns:1fr 1fr;gap:22px}.sig{border-top:1px solid #555;padding-top:5px;margin-top:28px;font-size:12px}
+@media print{body *{visibility:hidden}body.print-slip #resultSlip,body.print-slip #resultSlip *{visibility:visible}body.print-slip #resultSlip{position:absolute;left:0;top:0;max-width:none;width:100%;margin:0;border-radius:0;padding:14mm}body.print-slip #slipModal{display:block;background:white;padding:0}body:not(.print-slip) #templateSheet,body:not(.print-slip) #templateSheet *{visibility:visible}body:not(.print-slip) #templateSheet{position:absolute;left:0;top:0;box-shadow:none;margin:0}header,nav,main>.page:not(#templatePage),#templatePage>.card:first-child{display:none!important}}
 </style>
 </head>
 <body>
@@ -82,7 +83,7 @@ input,textarea,select{width:100%;padding:10px 11px;border:1px solid #d1d5db;bord
  <div class="card"><h2>Class Analysis</h2><div class="row"><select id="analysisAss" style="max-width:350px"></select><button id="exportCsv" class="btn alt">Export CSV</button><button id="clearResults" class="btn red">Clear results for assessment</button></div></div>
  <div class="card"><h3>Class Summary</h3><div class="grid g3"><div class="stat"><b id="cPupils">0</b>Pupils</div><div class="stat"><b id="cAvg">—</b>Average</div><div class="stat"><b id="cHard">—</b>Most difficult question</div></div></div>
  <div class="card"><h3>Question Heatmap</h3><div id="heat" class="heat"></div></div>
- <div class="card"><h3>Pupil Results</h3><div class="table"><table><thead><tr><th>Index</th><th>Name</th><th>Score</th><th>%</th><th>Saved</th></tr></thead><tbody id="resultsBody"></tbody></table></div></div>
+ <div class="card"><h3>Pupil Results</h3><div class="table"><table><thead><tr><th>Index</th><th>Name</th><th>Score</th><th>%</th><th>Saved</th><th>Result Slip</th></tr></thead><tbody id="resultsBody"></tbody></table></div></div>
  <div class="card"><h3>Learning Objective Analysis</h3><div id="loAnalysis"></div></div>
 </section>
 
@@ -100,6 +101,16 @@ input,textarea,select{width:100%;padding:10px 11px;border:1px solid #d1d5db;bord
  </div></div>
 </section>
 </main>
+<div id="slipModal">
+ <div id="resultSlip">
+  <div class="row" style="justify-content:flex-end" id="slipButtons"><button id="printSlip" class="btn">Print Result Slip</button><button id="closeSlip" class="btn ghost">Close</button></div>
+  <div class="slipHead"><div><h2 id="slipAssessment">Assessment Result</h2><div id="slipSubject" class="tip"></div><p><b>Name:</b> <span id="slipName">—</span><br><b>Index:</b> <span id="slipIndex">—</span></p></div><div class="slipScore"><span>Overall Score</span><br><b id="slipScore">—</b><br><span id="slipPercent">—</span></div></div>
+  <h3>Learning Objective Performance</h3>
+  <table class="loTable"><thead><tr><th>Learning Objective / Topic</th><th>Questions</th><th>Correct</th><th>Performance</th></tr></thead><tbody id="slipLoBody"></tbody></table>
+  <div id="slipNotes" class="status"></div>
+  <div class="slipFooter"><div><div class="sig">Teacher's signature</div></div><div><div class="sig">Parent's signature</div></div></div>
+ </div>
+</div>
 <script>
 const $=id=>document.getElementById(id);
 let assessments=JSON.parse(localStorage.getItem('oaspro_assessments')||'[]');
@@ -296,11 +307,63 @@ function renderAnalysis(){
  for(let r of rows)for(let q=1;q<=60;q++){let v=r.answers[q]||'-';qstats[q].choices[v]=(qstats[q].choices[v]||0)+1;if(/^[1-4]$/.test(a.key?.[q]||'')){qstats[q].n++;if(String(v)===String(a.key[q]))qstats[q].ok++}}
  let hard=Object.keys(qstats).filter(q=>qstats[q].n).sort((x,y)=>(qstats[x].ok/qstats[x].n)-(qstats[y].ok/qstats[y].n))[0];$('cHard').textContent=hard?'Q'+hard:'—';
  for(let q=1;q<=60;q++){let s=qstats[q],p=s.n?Math.round(s.ok/s.n*100):null;$('heat').innerHTML+='<div title="Q'+q+'">'+q+'<br>'+(p===null?'—':p+'%')+'</div>'}
- for(let r of rows){let tr=document.createElement('tr');tr.innerHTML='<td>'+escapeHtml(r.index||'—')+'</td><td>'+escapeHtml(r.name||'—')+'</td><td>'+r.score+'/'+r.total+'</td><td>'+(r.total?Math.round(r.score/r.total*100):0)+'%</td><td>'+new Date(r.ts).toLocaleString()+'</td>';$('resultsBody').appendChild(tr)}
+ for(let r of rows){let tr=document.createElement('tr');tr.innerHTML='<td>'+escapeHtml(r.index||'—')+'</td><td>'+escapeHtml(r.name||'—')+'</td><td>'+r.score+'/'+r.total+'</td><td>'+(r.total?Math.round(r.score/r.total*100):0)+'%</td><td>'+new Date(r.ts).toLocaleString()+'</td><td><button class="btn alt" data-slip="'+r.id+'">Print Slip</button></td>';$('resultsBody').appendChild(tr)}
+ document.querySelectorAll('[data-slip]').forEach(b=>b.onclick=()=>openResultSlip(b.dataset.slip,a));
  let los={};for(let q=1;q<=60;q++){let lo=a.lo?.[q];if(!lo)continue;if(!los[lo])los[lo]={ok:0,n:0};for(let r of rows){if(/^[1-4]$/.test(a.key?.[q]||'')){los[lo].n++;if(String(r.answers[q])===String(a.key[q]))los[lo].ok++}}}
  $('loAnalysis').innerHTML=Object.keys(los).length?Object.entries(los).map(([lo,s])=>'<div class="status"><b>'+escapeHtml(lo)+'</b>: '+s.ok+'/'+s.n+' ('+Math.round(s.ok/s.n*100)+'%)</div>').join(''):'<div class="tip">No LO mapping saved for this assessment.</div>'
 }
 
+
+function openResultSlip(scanId,a){
+ let r=scans.find(x=>x.id===scanId);if(!r||!a)return;
+ $('slipAssessment').textContent=a.name||'Assessment Result';
+ $('slipSubject').textContent=a.subject||'';
+ $('slipName').textContent=r.name||'—';
+ $('slipIndex').textContent=r.index||'—';
+ $('slipScore').textContent=r.score+'/'+r.total;
+ $('slipPercent').textContent=(r.total?Math.round(r.score/r.total*100):0)+'%';
+
+ let los={};
+ for(let q=1;q<=60;q++){
+   let lo=(a.lo?.[q]||'').trim();if(!lo)continue;
+   if(!los[lo])los[lo]={qs:[],correct:0,total:0};
+   los[lo].qs.push(q);
+   if(/^[1-4]$/.test(a.key?.[q]||'')){
+     los[lo].total++;
+     if(String(r.answers[q])===String(a.key[q]))los[lo].correct++;
+   }
+ }
+ $('slipLoBody').innerHTML='';
+ let weak=[];
+ if(Object.keys(los).length){
+   for(let [lo,s] of Object.entries(los)){
+     let pct=s.total?Math.round(s.correct/s.total*100):0;
+     if(s.total&&pct<60)weak.push(lo);
+     let tr=document.createElement('tr');
+     tr.innerHTML='<td>'+escapeHtml(lo)+'</td><td>'+s.qs.join(', ')+'</td><td>'+s.correct+'/'+s.total+'</td><td>'+pct+'%</td>';
+     $('slipLoBody').appendChild(tr);
+   }
+ }else{
+   $('slipLoBody').innerHTML='<tr><td colspan="4">No Learning Objectives have been mapped for this assessment.</td></tr>';
+ }
+ let blankQs=[],wrongQs=[];
+ for(let q=1;q<=60;q++){
+   if(!/^[1-4]$/.test(a.key?.[q]||''))continue;
+   let v=r.answers[q]||'-';
+   if(v==='-')blankQs.push(q);
+   else if(String(v)!==String(a.key[q]))wrongQs.push(q);
+ }
+ let notes=[];
+ if(wrongQs.length)notes.push('<b>Questions to review:</b> '+wrongQs.join(', '));
+ if(blankQs.length)notes.push('<b>Blank responses:</b> '+blankQs.join(', '));
+ if(weak.length)notes.push('<b>Learning Objectives to revise:</b> '+weak.map(escapeHtml).join(', '));
+ if(!notes.length)notes.push('All mapped Learning Objectives were completed successfully.');
+ $('slipNotes').innerHTML=notes.join('<br>');
+ $('slipModal').classList.add('open');
+}
+$('closeSlip').onclick=()=>{$('slipModal').classList.remove('open')};
+$('printSlip').onclick=()=>{document.body.classList.add('print-slip');window.print();setTimeout(()=>document.body.classList.remove('print-slip'),300)};
+window.addEventListener('afterprint',()=>document.body.classList.remove('print-slip'));
 $('exportCsv').onclick=()=>{
  let aid=$('analysisAss').value||currentId,a=assessments.find(x=>x.id===aid),rows=scans.filter(s=>s.assessmentId===aid);if(!a||!rows.length)return alert('No results to export.');
  let head=['Index','Name',...Array.from({length:60},(_,i)=>'Q'+(i+1)),'Score','Total','Percent'];let lines=[head.join(',')];
