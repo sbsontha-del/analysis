@@ -53,7 +53,7 @@ input,textarea,select{width:100%;padding:10px 11px;border:1px solid #d1d5db;bord
    <div><label>Assessment name</label><input id="assName" placeholder="e.g. P5 Science Practice Paper"></div>
    <div><label>Subject / class</label><input id="assSubject" placeholder="e.g. Science · 5 Victory"></div>
   </div>
-  <div class="row" style="margin-top:10px"><button id="newAss" class="btn alt">New</button><button id="saveAss" class="btn">Save assessment</button><select id="assSelect" style="max-width:330px"></select></div>
+  <div class="row" style="margin-top:10px"><button id="newAss" class="btn alt">New</button><button id="saveAss" class="btn">Save assessment</button><button id="deleteAss" class="btn red">Delete assessment</button><select id="assSelect" style="max-width:330px"></select></div>
  </div>
  <div class="card"><h3>Answer Key</h3><p class="tip">Paste 60 answers separated by commas/spaces, or tap the buttons below.</p>
   <textarea id="quickKey" placeholder="Example: 2,3,2,2,3,4..."></textarea><button id="applyKey" class="btn alt">Apply pasted key</button>
@@ -145,6 +145,17 @@ function buildKeyGrid(a){
 }
 $('newAss').onclick=()=>{let a=blankAss();assessments.push(a);currentId=a.id;persist();$('assName').focus()}
 $('assSelect').onchange=e=>{currentId=e.target.value;persist()}
+$('deleteAss').onclick=()=>{
+ let a=currentAss();if(!a)return alert('Select an assessment to delete.');
+ let related=scans.filter(s=>s.assessmentId===a.id).length;
+ let msg='Delete "'+a.name+'"?';
+ if(related)msg+='\n\nThis will also delete '+related+' saved pupil result'+(related===1?'':'s')+' for this assessment.';
+ if(!confirm(msg))return;
+ scans=scans.filter(s=>s.assessmentId!==a.id);
+ assessments=assessments.filter(x=>x.id!==a.id);
+ currentId=assessments[0]?.id||'';
+ persist();
+}
 $('analysisAss').onchange=()=>renderAnalysis()
 $('saveAss').onclick=()=>{let a=currentAss();if(!a){a=blankAss();assessments.push(a);currentId=a.id}a.name=$('assName').value.trim()||'Untitled assessment';a.subject=$('assSubject').value.trim();document.querySelectorAll('[data-loq]').forEach(i=>a.lo[i.dataset.loq]=i.value.trim());persist();alert('Assessment saved.')}
 $('applyKey').onclick=()=>{let a=currentAss();if(!a){a=blankAss();assessments.push(a);currentId=a.id}let v=$('quickKey').value.trim().split(/[\s,;|]+/).filter(Boolean);for(let i=0;i<Math.min(60,v.length);i++)if(/^[1-4]$/.test(v[i]))a.key[i+1]=v[i];persist()}
