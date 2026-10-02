@@ -67,6 +67,7 @@ input,textarea,select{width:100%;padding:10px 11px;border:1px solid #d1d5db;bord
   <div class="grid g2"><div><label>Index / register no.</label><input id="studentIndex" placeholder="5-digit index number; can be edited after scan"></div><div><label>Pupil name</label><input id="studentName" placeholder="Optional"></div></div>
   <div class="row" style="margin-top:10px"><button id="startCamera" class="btn">📷 Live Scan</button><button id="stopCamera" class="btn ghost" style="display:none">Stop Camera</button><input id="photo" type="file" accept="image/*" style="max-width:360px"><button id="scanBtn" class="btn alt">Scan Uploaded Photo</button><button id="resetScan" class="btn ghost">Reset</button></div>
   <div id="scanStatus" class="status">Tap <b>Live Scan</b> and hold the sheet inside the frame. The app will scan automatically when all four corner markers are visible.</div>
+  <div id="indexScanStatus" class="status">Index number: not scanned yet.</div>
   <div id="cameraWrap"><video id="cameraVideo" playsinline muted></video><div class="cameraGuide"></div><div class="cameraHint">Hold steady — auto-scan when aligned</div></div>
   <canvas id="liveFrame" style="display:none"></canvas>
   <div id="previewWrap" style="margin-top:10px"><canvas id="preview"></canvas></div>
@@ -193,7 +194,7 @@ async function startCamera(){
  }catch(e){$('scanStatus').innerHTML='<span class="bad">Camera could not start: '+escapeHtml(e.message)+'</span>'}
 }
 $('startCamera').onclick=startCamera;$('stopCamera').onclick=stopCamera;
-function resetScan(){stopCamera();$('photo').value='';$('previewWrap').style.display='none';$('resultCard').style.display='none';$('scanStatus').innerHTML='Tap <b>Live Scan</b> and hold the sheet inside the frame. The app will scan automatically when all four corner markers are visible.';workingAnswers={};workingScores={};$('studentName').value='';$('studentIndex').value=''}
+function resetScan(){stopCamera();$('photo').value='';$('previewWrap').style.display='none';$('resultCard').style.display='none';$('scanStatus').innerHTML='Tap <b>Live Scan</b> and hold the sheet inside the frame. The app will scan automatically when all four corner markers are visible.';$('indexScanStatus').textContent='Index number: not scanned yet.';workingAnswers={};workingScores={};$('studentName').value='';$('studentIndex').value=''}
 
 function cvLoaded(){return !!(window.cv&&window.cv.Mat)}
 setInterval(()=>{$('cvStatus').innerHTML=cvLoaded()?'<span class="ok">✓ Computer vision ready.</span>':'Loading computer vision…'},700);
@@ -232,8 +233,46 @@ function graphiteScore(gray,cx,cy){
  }
  return n?(dark+.45*mid)/n:0;
 }
+
+function indexBubbleScore(gray,cx,cy){
+ let rx=13,ry=8,dark=0,mid=0,n=0;
+ for(let y=-ry;y<=ry;y++)for(let x=-rx;x<=rx;x++){
+   let rr=(x*x)/(rx*rx)+(y*y)/(ry*ry);
+   if(rr<.18||rr>.9)continue;
+   let X=Math.round(cx+x),Y=Math.round(cy+y);
+   if(X<0||Y<0||X>=gray.cols||Y>=gray.rows)continue;
+   let v=gray.ucharPtr(Y,X)[0];n++;
+   if(v<145)dark++; else if(v<190)mid++;
+ }
+ return n?(dark+.45*mid)/n:0;
+}
+function detectIndexNumber(gray){
+ const x0=295,dx=42,ys=[180,218,256,294,332];
+ let digits=[],ok=true;
+ for(let r=0;r<5;r++){
+   let ss=[];
+   for(let d=0;d<10;d++){
+     let best=0,cx=x0+d*dx,cy=ys[r];
+     for(let dy=-3;dy<=3;dy+=2)for(let dx2=-3;dx2<=3;dx2+=2)
+       best=Math.max(best,indexBubbleScore(gray,cx+dx2,cy+dy));
+     ss.push(best);
+   }
+   let ord=[0,1,2,3,4,5,6,7,8,9].sort((a,b)=>ss[b]-ss[a]);
+   let top=ss[ord[0]],second=ss[ord[1]],gap=top-second;
+   if(top>=.30&&gap>=.07)digits.push(String(ord[0]));
+   else {digits.push('?');ok=false;}
+ }
+ return {value:digits.join(''),ok};
+}
 function scanWarped(dst){
  let gray=new cv.Mat();cv.cvtColor(dst,gray,cv.COLOR_RGBA2GRAY);
+ let idx=detectIndexNumber(gray);
+ if(idx.ok){
+   $('studentIndex').value=idx.value;
+   $('indexScanStatus').innerHTML='<span class="ok">✓ Index number detected: <b>'+idx.value+'</b></span>';
+ }else{
+   $('indexScanStatus').innerHTML='<span class="warn">⚠ Index number needs checking: <b>'+idx.value+'</b></span> You can edit it above before saving.';
+ }
  let all=[];
  for(let q=1;q<=60;q++){let ss=[];for(let o=1;o<=4;o++){let [x,y]=bubbleXY(q,o),best=0;for(let dy=-3;dy<=3;dy+=2)for(let dx=-3;dx<=3;dx+=2)best=Math.max(best,graphiteScore(gray,x+dx,y+dy));ss.push(best)}all.push(ss)}
  // Global blank baseline from the lower half of all option scores.
