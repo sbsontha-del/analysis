@@ -194,11 +194,30 @@ th{background:#f8fafc;font-weight:700;color:var(--mut)}
         <div><label>Pupil Name</label><input id="studentName" placeholder="Student name (optional)"></div>
       </div>
       <div class="row" style="margin-top:14px">
+        <button id="toggleCamBtn" class="btn alt">📹 Open Live Camera</button>
+        <button id="toggleUploadBtn" class="btn ghost">📁 Upload Photo</button>
+      </div>
+
+      <!-- Live Video Viewfinder -->
+      <div id="liveCamWrap" style="display:none;margin-top:14px;position:relative;background:#0f172a;border-radius:14px;overflow:hidden;text-align:center">
+        <video id="videoFeed" autoplay playsinline muted style="width:100%;max-height:55vh;object-fit:contain;display:block;margin:auto"></video>
+        <canvas id="overlayCanvas" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none"></canvas>
+        <div id="camStatusOverlay" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.85);color:#fff;padding:8px 16px;border-radius:999px;font-size:13px;font-weight:700;backdrop-filter:blur(4px);pointer-events:none;white-space:nowrap">
+          Initializing live camera…
+        </div>
+      </div>
+
+      <!-- File Upload Input -->
+      <div id="uploadWrap" style="margin-top:14px">
         <input id="photo" type="file" accept="image/*" style="max-width:380px">
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <button id="captureScanBtn" class="btn" style="display:none">📸 Capture & Scan Live Sheet</button>
         <button id="scanBtn" class="btn">🔍 Detect & Scan Sheet</button>
         <button id="resetScan" class="btn ghost">Reset</button>
       </div>
-      <div id="scanStatus" class="status">Select or capture a photo of the filled OAS sheet.</div>
+      <div id="scanStatus" class="status">Tap "Open Live Camera" or choose a photo of the filled OAS sheet.</div>
       <div id="previewWrap" style="margin-top:14px"><canvas id="preview"></canvas></div>
     </div>
 
@@ -449,8 +468,125 @@ function bubbleXY(q,opt){
 }
 
 let img=new Image(), cvCanvas=$('preview'),ctx=cvCanvas.getContext('2d',{willReadFrequently:true});
+let mediaStream = null, liveScanInterval = null;
+
+async function startCamera(){
+  stopCamera();
+  try {
+    $('scanStatus').innerHTML = 'Requesting camera access…';
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    });
+    let video = $('videoFeed');
+    video.srcObject = mediaStream;
+    await video.play();
+    
+    $('liveCamWrap').style.display = 'block';
+    $('uploadWrap').style.display = 'none';
+    $('previewWrap').style.display = 'none';
+    $('captureScanBtn').style.display = 'inline-flex';
+    $('scanBtn').style.display = 'none';
+    $('scanStatus').innerHTML = '<span class="ok">✓ Live camera active.</span> Point camera at the OAS sheet.';
+    startLiveMarkerDetection();
+  } catch(err) {
+    $('scanStatus').innerHTML = '<span class="bad">✕ Camera error: ' + escapeHtml(err.message) + '.</span> Please use photo upload mode.';
+    stopCamera();
+  }
+}
+
+function stopCamera(){
+  if(liveScanInterval){ clearInterval(liveScanInterval); liveScanInterval = null; }
+  if(mediaStream){
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+  }
+  let video = $('videoFeed');
+  if(video) video.srcObject = null;
+  $('liveCamWrap').style.display = 'none';
+  $('captureScanBtn').style.display = 'none';
+  $('scanBtn').style.display = 'inline-flex';
+}
+
+function startLiveMarkerDetection(){
+  if(liveScanInterval) clearInterval(liveScanInterval);
+  let video = $('videoFeed'), overlay = $('overlayCanvas');
+  if(!video || !overlay) return;
+  let octx = overlay.getContext('2d');
+  
+  liveScanInterval = setInterval(() => {
+    if(!video || video.paused || video.ended || !video.videoWidth) return;
+    overlay.width = video.videoWidth;
+    overlay.height = video.videoHeight;
+    octx.clearRect(0,0,overlay.width,overlay.height);
+    
+    if(!cvLoaded()){
+      $('camStatusOverlay').textContent = 'Loading Computer Vision library…';
+      return;
+    }
+    
+    try {
+      cvCanvas.width = video.videoWidth;
+      cvCanvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, cvCanvas.width, cvCanvas.height);
+      
+      let src = cv.imread(cvCanvas);
+      let markers = findMarkers(src);
+      src.delete();
+      
+      if(markers && markers.length === 4){
+        octx.strokeStyle = '#22c55e';
+        octx.lineWidth = 4;
+        octx.fillStyle = '#22c55e';
+        for(let p of markers){
+          octx.beginPath();
+          octx.arc(p[0], p[1], 12, 0, 2*Math.PI);
+          octx.fill();
+        }
+        octx.beginPath();
+        octx.moveTo(markers[0][0], markers[0][1]);
+        octx.lineTo(markers[1][0], markers[1][1]);
+        octx.lineTo(markers[2][0], markers[2][1]);
+        octx.lineTo(markers[3][0], markers[3][1]);
+        octx.closePath();
+        octx.stroke();
+        $('camStatusOverlay').innerHTML = '<span style="color:#4ade80">✓ 4 Corner Markers Locked! Tap Capture</span>';
+      } else {
+        $('camStatusOverlay').textContent = 'Point camera at sheet until 4 corner markers lock…';
+      }
+    } catch(e){}
+  }, 250);
+}
+
+$('toggleCamBtn').onclick = () => { startCamera(); };
+$('toggleUploadBtn').onclick = () => {
+  stopCamera();
+  $('uploadWrap').style.display = 'block';
+  $('scanStatus').textContent = 'Select a photo of the filled OAS sheet.';
+};
+
+$('captureScanBtn').onclick = () => {
+  let video = $('videoFeed');
+  if(!video || !video.videoWidth) return alert('Camera feed is not ready.');
+  
+  let s = Math.min(1, 1800 / video.videoWidth);
+  cvCanvas.width = Math.round(video.videoWidth * s);
+  cvCanvas.height = Math.round(video.videoHeight * s);
+  ctx.drawImage(video, 0, 0, cvCanvas.width, cvCanvas.height);
+  
+  let tempImg = new Image();
+  tempImg.onload = () => {
+    img = tempImg;
+    stopCamera();
+    $('previewWrap').style.display = 'block';
+    $('scanBtn').click();
+  };
+  tempImg.src = cvCanvas.toDataURL();
+};
+
 $('photo').onchange=e=>{
   let f=e.target.files?.[0];if(!f)return;
+  stopCamera();
   let r=new FileReader();
   r.onload=ev=>{
     img=new Image();
@@ -469,8 +605,10 @@ $('photo').onchange=e=>{
 $('resetScan').onclick=resetScan;
 $('scanNext').onclick=()=>{resetScan();window.scrollTo({top:0,behavior:'smooth'})};
 function resetScan(){
+  stopCamera();
   $('photo').value='';$('previewWrap').style.display='none';$('resultCard').style.display='none';
-  $('scanStatus').textContent='Select or capture a photo of the filled OAS sheet.';
+  $('uploadWrap').style.display='block';
+  $('scanStatus').textContent='Tap "Open Live Camera" or choose a photo of the filled OAS sheet.';
   workingAnswers={};workingScores={};$('studentName').value='';$('studentIndex').value='';
 }
 
