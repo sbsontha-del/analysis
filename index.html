@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>OAS Analysis</title><style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f7fb;color:#182230}header{background:#fff;border-bottom:1px solid #e5e7eb;padding:16px;position:sticky;top:0;z-index:5}header b{font-size:20px}main{max-width:900px;margin:auto;padding:14px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:16px;margin-bottom:14px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn,label.btn{display:inline-block;border:0;border-radius:12px;padding:12px 15px;font-weight:700;font-size:15px;cursor:pointer;background:#2563eb;color:#fff}.alt{background:#eef2ff!important;color:#1e40af!important}.ghost{background:#f3f4f6!important;color:#374151!important}input[type=file]{display:block!important}.tip{font-size:13px;color:#667085;line-height:1.45}.status{padding:10px 12px;border-radius:12px;background:#f3f4f6;margin-top:10px;font-size:14px}#wrap{display:none;overflow:auto;background:#111;border-radius:14px;max-height:68vh;margin-top:10px}canvas{display:block;max-width:100%;height:auto;margin:auto;touch-action:none}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}.q{border:1px solid #e5e7eb;border-radius:12px;padding:9px}.qh{display:flex;justify-content:space-between;font-weight:800}.choices{display:flex;gap:4px;margin-top:7px}.choices button{padding:7px 9px;border:0;border-radius:9px;background:#f3f4f6}.choices .sel{background:#dbeafe;outline:2px solid #60a5fa}.flag{color:#d97706;font-size:11px}.ok{color:#16a34a}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}.m{background:#f8fafc;border-radius:12px;padding:10px;text-align:center}.m strong{display:block;font-size:22px}textarea{width:100%;min-height:120px}.keyrow{border:1px solid #e5e7eb;border-radius:12px;padding:9px}.keyrow input{width:100%;margin-top:7px;padding:7px;border:1px solid #d1d5db;border-radius:8px}.scorebox{background:#ecfdf5;border:1px solid #a7f3d0;border-radius:14px;padding:12px;margin-bottom:12px}.wrong{color:#dc2626}.correct{color:#16a34a}
-</style></head><body><header><b>OAS Analysis</b><div class="tip"><b>Build 31</b> · auto-aligned graphite scanner</div></header><main>
-<section class="card"><h3>Answer Key & Learning Objectives</h3><p class="tip">Enter the correct option (1–4) and an optional LO for each question. The key is saved on this device.</p><div class="actions"><button id="toggleKey" class="btn alt">Set / Edit Answer Key</button><button id="clearKey" class="btn ghost">Clear Key</button></div><div id="keyPanel" style="display:none;margin-top:12px"><div id="keyGrid" class="grid"></div><div class="actions" style="margin-top:12px"><button id="saveKey" class="btn">Save Answer Key</button></div></div><div id="keyStatus" class="status">No answer key saved yet.</div></section><section class="card"><h3>1. Scan pupil sheet</h3><div class="actions"><input id="pick" type="file" accept="image/*" style="font-size:16px;max-width:100%;margin:6px 0 12px"></div><p id="msg" class="tip">No photo selected.</p><div id="wrap"><canvas id="cv"></canvas></div><div id="st" class="status">Upload a pupil sheet.</div><div class="actions" style="margin-top:10px"><button id="undo" class="btn ghost" disabled style="display:none">Undo corner</button><button id="scan" class="btn">🔍 Detect & Scan Answers</button><button id="reset" class="btn alt">Reset</button></div><p class="tip"><b>Build 31:</b> Tap <b>Choose File</b>, select or take a photo of the pupil sheet, and wait for the preview to appear. Then tap <b>Detect & Scan Answers</b>.</p></section>
+</style></head><body><header><b>OAS Analysis</b><div class="tip"><b>Build 32</b> · bubble-grid aligned graphite scanner</div></header><main>
+<section class="card"><h3>Answer Key & Learning Objectives</h3><p class="tip">Enter the correct option (1–4) and an optional LO for each question. The key is saved on this device.</p><div class="actions"><button id="toggleKey" class="btn alt">Set / Edit Answer Key</button><button id="clearKey" class="btn ghost">Clear Key</button></div><div id="keyPanel" style="display:none;margin-top:12px"><div id="keyGrid" class="grid"></div><div class="actions" style="margin-top:12px"><button id="saveKey" class="btn">Save Answer Key</button></div></div><div id="keyStatus" class="status">No answer key saved yet.</div></section><section class="card"><h3>1. Scan pupil sheet</h3><div class="actions"><input id="pick" type="file" accept="image/*" style="font-size:16px;max-width:100%;margin:6px 0 12px"></div><p id="msg" class="tip">No photo selected.</p><div id="wrap"><canvas id="cv"></canvas></div><div id="st" class="status">Upload a pupil sheet.</div><div class="actions" style="margin-top:10px"><button id="undo" class="btn ghost" disabled style="display:none">Undo corner</button><button id="scan" class="btn">🔍 Detect & Scan Answers</button><button id="reset" class="btn alt">Reset</button></div><p class="tip"><b>Build 32:</b> Tap <b>Choose File</b>, select or take a photo of the pupil sheet, and wait for the preview to appear. Then tap <b>Detect & Scan Answers</b>.</p></section>
 <section id="rescard" class="card" style="display:none"><h3>2. Verify & Mark</h3><div id="indexResult" class="status">Index number: detecting…</div><div id="markSummary"></div><div class="metrics"><div class="m"><strong id="dn">0</strong>Detected</div><div class="m"><strong id="rn">0</strong>Review</div><div class="m"><strong id="bn">0</strong>Blank</div></div><div id="res" class="grid"></div><details><summary>Debug scores</summary><textarea id="dbg" readonly></textarea></details></section>
 </main><script>
 let KEY=JSON.parse(localStorage.getItem('oasKey')||'{}'), LOS=JSON.parse(localStorage.getItem('oasLO')||'{}');
@@ -41,8 +41,8 @@ function cvScan(){
 function calibratedCanvasScan(){
  let w=canvas.width,h=canvas.height,data=ctx.getImageData(0,0,w,h).data,ans2={},scores2={};
 
- // Build 31: automatically align each upload to the proven Build 30 template.
- // First find the page bounds, then map the reference bubble coordinates into that rectangle.
+ // Build 32: align to the bubble grid itself, not to page edges.
+ // Uses the proven Build 30 graphite test after locating repeated oval outlines.
  const RW=1152,RH=1536;
  const Y=[
   [416,458,501,543,586,653,698,743,788,835,909,957,1005,1054,1105,1181,1233,1285,1337,1390],
@@ -56,102 +56,116 @@ function calibratedCanvasScan(){
  ];
 
  function L(x,y){
-   x=Math.round(x); y=Math.round(y);
-   if(x<0||y<0||x>=w||y>=h) return 255;
+   x=Math.round(x);y=Math.round(y);
+   if(x<0||y<0||x>=w||y>=h)return 255;
    let k=(y*w+x)*4;
    return .299*data[k]+.587*data[k+1]+.114*data[k+2];
  }
+ function xRef(bi,opt,yRef){let p=P[bi][opt];return p[0]*yRef*yRef+p[1]*yRef+p[2]}
 
- // Estimate the white page rectangle against the darker surroundings.
- // Uses edge darkness scans rather than OCR or contour libraries.
- function pageRect(){
-   function edgeScoreX(x){
-     let s=0,n=0;
-     for(let y=Math.round(h*.08);y<Math.round(h*.96);y+=Math.max(2,Math.round(h/250))){
-       let v=L(x,y); if(v<235)s+=(235-v); n++;
-     }
-     return n?s/n:0;
+ // Dark oval-outline score. Blank and filled bubbles both have the same printed oval,
+ // so this is a reliable alignment signal independent of pupil answers.
+ function ovalScore(cx,cy,sx,sy){
+   let rx=Math.max(5,15*sx),ry=Math.max(4,9*sy),sum=0,n=0;
+   const pts=[[1,0],[-1,0],[0,1],[0,-1],[.86,.5],[.86,-.5],[-.86,.5],[-.86,-.5],[.5,.86],[.5,-.86],[-.5,.86],[-.5,-.86]];
+   for(let p of pts){
+     let v=L(cx+p[0]*rx,cy+p[1]*ry);
+     sum+=Math.max(0,225-v); n++;
    }
-   function edgeScoreY(y){
-     let s=0,n=0;
-     for(let x=Math.round(w*.05);x<Math.round(w*.95);x+=Math.max(2,Math.round(w/180))){
-       let v=L(x,y); if(v<235)s+=(235-v); n++;
-     }
-     return n?s/n:0;
-   }
-
-   // Start from broad page assumptions, then refine around strong page boundaries.
-   let left=Math.round(w*.02), right=Math.round(w*.98), top=Math.round(h*.01), bottom=Math.round(h*.99);
-
-   let bestL={x:left,s:-1},bestR={x:right,s:-1};
-   for(let x=Math.round(w*.01);x<Math.round(w*.18);x+=2){let s=edgeScoreX(x);if(s>bestL.s){bestL={x,s}}}
-   for(let x=Math.round(w*.82);x<Math.round(w*.995);x+=2){let s=edgeScoreX(x);if(s>bestR.s){bestR={x,s}}}
-   let bestT={y:top,s:-1},bestB={y:bottom,s:-1};
-   for(let y=Math.round(h*.005);y<Math.round(h*.16);y+=2){let s=edgeScoreY(y);if(s>bestT.s){bestT={y,s}}}
-   for(let y=Math.round(h*.84);y<Math.round(h*.995);y+=2){let s=edgeScoreY(y);if(s>bestB.s){bestB={y,s}}}
-
-   // The photograph itself may contain page edges outside the dark text area.
-   // Pad slightly outward from the detected strongest edge.
-   left=Math.max(0,bestL.x-Math.round(w*.01));
-   right=Math.min(w-1,bestR.x+Math.round(w*.01));
-   top=Math.max(0,bestT.y-Math.round(h*.01));
-   bottom=Math.min(h-1,bestB.y+Math.round(h*.01));
-
-   // Sanity fallback if the detected rectangle is implausibly small.
-   if(right-left<w*.65){left=0;right=w}
-   if(bottom-top<h*.75){top=0;bottom=h}
-
-   return {left,right,top,bottom,pw:right-left,ph:bottom-top};
+   return n?sum/n:0;
  }
 
- const R=pageRect();
-
- function xRef(bi,opt,yRef){
-   let p=P[bi][opt];
-   return p[0]*yRef*yRef+p[1]*yRef+p[2];
+ const sx0=w/RW,sy0=h/RH;
+ const anchorRows=[0,4,5,9,10,14,15,19];
+ const anchors=[];
+ for(let bi=0;bi<3;bi++)for(let ri of anchorRows){
+   let yr=Y[bi][ri];
+   anchors.push([xRef(bi,0,yr),yr]);
+   anchors.push([xRef(bi,3,yr),yr]);
  }
 
- function mapX(xRef){ return R.left + (xRef/RW)*R.pw; }
- function mapY(yRef){ return R.top  + (yRef/RH)*R.ph; }
+ function fitScore(k,dx,dy){
+   let sx=sx0*k,sy=sy0*k,s=0;
+   for(let a of anchors)s+=ovalScore(dx+a[0]*sx,dy+a[1]*sy,sx,sy);
+   return s/anchors.length;
+ }
+
+ // Coarse global search for scale + translation.
+ let best={k:1,dx:0,dy:0,score:-1};
+ for(let k=.76;k<=1.061;k+=.05){
+   for(let fx=-.12;fx<=.121;fx+=.03){
+     for(let fy=-.12;fy<=.121;fy+=.03){
+       let dx=fx*w,dy=fy*h,s=fitScore(k,dx,dy);
+       if(s>best.score)best={k,dx,dy,score:s};
+     }
+   }
+ }
+
+ // Fine search around the best coarse transform.
+ let coarse=best;
+ for(let k=Math.max(.70,coarse.k-.06);k<=Math.min(1.12,coarse.k+.061);k+=.015){
+   for(let dx=coarse.dx-.035*w;dx<=coarse.dx+.035*w;dx+=.01*w){
+     for(let dy=coarse.dy-.035*h;dy<=coarse.dy+.035*h;dy+=.01*h){
+       let s=fitScore(k,dx,dy);
+       if(s>best.score)best={k,dx,dy,score:s};
+     }
+   }
+ }
+
+ const gsx=sx0*best.k,gsy=sy0*best.k;
+
+ // Each 5-question group gets a tiny local shift, which absorbs perspective/tilt
+ // without ever jumping to another group.
+ const local={};
+ for(let bi=0;bi<3;bi++)for(let g=0;g<4;g++){
+   let lk=bi+'-'+g,bv={dx:0,dy:0,score:-1};
+   for(let dx=-.018*w;dx<=.0181*w;dx+=.006*w){
+     for(let dy=-.018*h;dy<=.0181*h;dy+=.006*h){
+       let s=0,n=0;
+       for(let j=0;j<5;j++){
+         let ri=g*5+j,yr=Y[bi][ri];
+         for(let opt=0;opt<4;opt++){
+           let cx=best.dx+xRef(bi,opt,yr)*gsx+dx,cy=best.dy+yr*gsy+dy;
+           s+=ovalScore(cx,cy,gsx,gsy); n++;
+         }
+       }
+       s/=Math.max(1,n);
+       if(s>bv.score)bv={dx,dy,score:s};
+     }
+   }
+   local[lk]=bv;
+ }
 
  function graphite(cx,cy){
-   let rx=Math.max(6,Math.round(R.pw*(15/RW))),ry=Math.max(5,Math.round(R.ph*(10/RH)));
-   let dark=0,mid=0,n=0;
-   for(let yy=-ry;yy<=ry;yy++)for(let xx=-rx;xx<=rx;xx++){
+   let rx=Math.max(6,15*gsx),ry=Math.max(5,10*gsy),dark=0,mid=0,n=0;
+   for(let yy=-Math.round(ry);yy<=Math.round(ry);yy++)for(let xx=-Math.round(rx);xx<=Math.round(rx);xx++){
      let r=(xx*xx)/(rx*rx)+(yy*yy)/(ry*ry);
      if(r<.20||r>.90)continue;
-     let v=L(cx+xx,cy+yy); n++;
+     let v=L(cx+xx,cy+yy);n++;
      if(v<145)dark++;
      else if(v<190)mid++;
    }
    return n?(dark+.45*mid)/n:0;
  }
 
- for(let bi=0;bi<3;bi++){
-   for(let ri=0;ri<20;ri++){
-     let q=bi*20+ri+1,yRef=Y[bi][ri],cy=mapY(yRef),ss=[];
-     for(let opt=0;opt<4;opt++){
-       let cx=mapX(xRef(bi,opt,yRef)),best=0;
-       let dxMax=Math.max(2,Math.round(R.pw*7/RW)),dyMax=Math.max(2,Math.round(R.ph*6/RH));
-       for(let dy=-dyMax;dy<=dyMax;dy+=2)
-         for(let dx=-dxMax;dx<=dxMax;dx+=2)
-           best=Math.max(best,graphite(cx+dx,cy+dy));
-       ss.push(best);
-     }
-
-     scores2[q]=ss;
-     let ord=[0,1,2,3].sort((u,v)=>ss[v]-ss[u]);
-     let best=ss[ord[0]],second=ss[ord[1]],gap=best-second;
-
-     if(best>=.58 && gap>=.08) ans2[q]=String(ord[0]+1);
-     else ans2[q]='-';
+ for(let bi=0;bi<3;bi++)for(let ri=0;ri<20;ri++){
+   let q=bi*20+ri+1,g=Math.floor(ri/5),yr=Y[bi][ri],ls=local[bi+'-'+g],ss=[];
+   for(let opt=0;opt<4;opt++){
+     let cx=best.dx+xRef(bi,opt,yr)*gsx+ls.dx,cy=best.dy+yr*gsy+ls.dy,bv=0;
+     // Very small search inside the detected oval centre.
+     for(let dy=-3;dy<=3;dy+=2)for(let dx=-3;dx<=3;dx+=2)bv=Math.max(bv,graphite(cx+dx,cy+dy));
+     ss.push(bv);
    }
+   scores2[q]=ss;
+   let ord=[0,1,2,3].sort((u,v)=>ss[v]-ss[u]),top=ss[ord[0]],second=ss[ord[1]],gap=top-second;
+   // Preserve the Build 30 decision rule that gave the correct 30/30 result.
+   if(top>=.58&&gap>=.08)ans2[q]=String(ord[0]+1);else ans2[q]='-';
  }
 
- ans=ans2; scores=scores2;
+ ans=ans2;scores=scores2;
  indexResult.textContent='Index number: detection pending';
  render();
- st.innerHTML='<span class=ok>✓ Build 31 auto-aligned graphite scan complete.</span>';
+ st.innerHTML='<span class=ok>✓ Build 32 bubble-grid aligned scan complete.</span>';
  return true;
 }
 function fixedTemplateScan(){
