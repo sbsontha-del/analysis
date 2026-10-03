@@ -5,7 +5,29 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>OAS Pro</title>
 <script>
-window.cvReady=false; window.cvLoadFailed=false;
+window.cvReady=false; window.cvLoadFailed=false; window.cvLoadMessage='Loading computer vision…';
+async function resolveCV(){
+ try{
+  if(!window.cv)return false;
+  if(typeof window.cv.then==='function'){
+   window.cv=await window.cv;
+  }
+  if(window.cv&&window.cv.Mat){
+   window.cvReady=true;window.cvLoadFailed=false;window.cvLoadMessage='Computer vision ready.';
+   return true;
+  }
+  if(window.cv && 'onRuntimeInitialized' in window.cv){
+   window.cv.onRuntimeInitialized=()=>{
+    window.cvReady=!!(window.cv&&window.cv.Mat);
+    window.cvLoadFailed=!window.cvReady;
+    window.cvLoadMessage=window.cvReady?'Computer vision ready.':'Computer vision failed to initialise.';
+   };
+  }
+ }catch(e){
+  window.cvLoadMessage='Computer vision error: '+(e&&e.message?e.message:e);
+ }
+ return false;
+}
 function loadOpenCV(){
  const urls=[
   'https://docs.opencv.org/4.x/opencv.js',
@@ -13,13 +35,17 @@ function loadOpenCV(){
  ];
  let i=0;
  const tryNext=()=>{
-  if(i>=urls.length){window.cvLoadFailed=true;return;}
+  if(i>=urls.length){window.cvLoadFailed=true;window.cvLoadMessage='Computer vision could not be loaded.';return;}
   const s=document.createElement('script'); s.async=true; s.src=urls[i++];
-  s.onload=()=>{
-   const wait=()=>{
-    if(window.cv&&window.cv.Mat){window.cvReady=true;window.cvLoadFailed=false;}
-    else setTimeout(wait,250);
-   }; wait();
+  s.onload=async()=>{
+   let ok=await resolveCV();
+   if(ok)return;
+   let tries=0;
+   const poll=setInterval(async()=>{
+    tries++;
+    if(await resolveCV()){clearInterval(poll);return;}
+    if(tries>=40){clearInterval(poll);tryNext();}
+   },250);
   };
   s.onerror=()=>tryNext();
   document.head.appendChild(s);
@@ -237,15 +263,15 @@ function updateCvStatus(){
    $('cvStatus').innerHTML='<span class="ok">✓ Computer vision ready.</span>';
    $('retryCv').style.display='none';
  }else if(window.cvLoadFailed || Date.now()-cvWaitStarted>12000){
-   $('cvStatus').innerHTML='<span class="bad">Computer vision did not load.</span> Tap Retry. If it still fails, open this page in Safari instead of the in-app browser.';
+   $('cvStatus').innerHTML='<span class="bad">Computer vision did not load.</span> '+escapeHtml(window.cvLoadMessage||'')+' Tap Retry.';
    $('retryCv').style.display='inline-block';
  }else{
-   $('cvStatus').textContent='Loading computer vision…';
+   $('cvStatus').textContent=window.cvLoadMessage||'Loading computer vision…';
  }
 }
 setInterval(updateCvStatus,700);
 $('retryCv').onclick=()=>{
- window.cvLoadFailed=false;cvWaitStarted=Date.now();$('retryCv').style.display='none';$('cvStatus').textContent='Retrying computer vision…';loadOpenCV();
+ window.cvLoadFailed=false;window.cvReady=false;window.cvLoadMessage='Retrying computer vision…';cvWaitStarted=Date.now();$('retryCv').style.display='none';$('cvStatus').textContent='Retrying computer vision…';loadOpenCV();
 };
 
 function findMarkers(src){
