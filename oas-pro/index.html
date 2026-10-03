@@ -4,7 +4,30 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>OAS Pro</title>
-<script async src="https://docs.opencv.org/4.x/opencv.js" onload="window.cvReady=true"></script>
+<script>
+window.cvReady=false; window.cvLoadFailed=false;
+function loadOpenCV(){
+ const urls=[
+  'https://docs.opencv.org/4.x/opencv.js',
+  'https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.11.0-release.1/dist/opencv.js'
+ ];
+ let i=0;
+ const tryNext=()=>{
+  if(i>=urls.length){window.cvLoadFailed=true;return;}
+  const s=document.createElement('script'); s.async=true; s.src=urls[i++];
+  s.onload=()=>{
+   const wait=()=>{
+    if(window.cv&&window.cv.Mat){window.cvReady=true;window.cvLoadFailed=false;}
+    else setTimeout(wait,250);
+   }; wait();
+  };
+  s.onerror=()=>tryNext();
+  document.head.appendChild(s);
+ };
+ tryNext();
+}
+loadOpenCV();
+</script>
 <style>
 :root{--b:#2563eb;--g:#16a34a;--r:#dc2626;--a:#d97706;--ink:#182230;--mut:#667085;--bg:#f5f7fb;--card:#fff;--line:#e5e7eb}
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -44,7 +67,7 @@ input,textarea,select{width:100%;padding:10px 11px;border:1px solid #d1d5db;bord
  <div class="card"><h2>Teacher Dashboard</h2><p class="tip">Recommended workflow: set up an assessment → print the standard OAS template → scan pupils → verify → save → analyse.</p>
  <div class="grid g3"><div class="stat"><b id="hAssess">0</b>Assessments</div><div class="stat"><b id="hScans">0</b>Saved scans</div><div class="stat"><b id="hCurrent">—</b>Current assessment</div></div></div>
  <div class="card"><h3>Quick start</h3><div class="row"><button class="btn" onclick="go('assessment')">1. Set up assessment</button><button class="btn alt" onclick="go('templatePage')">2. Print blank OAS</button><button class="btn" onclick="go('scan')">3. Scan pupil sheet</button></div></div>
- <div class="card"><h3>Scanner status</h3><div id="cvStatus" class="status">Loading computer vision…</div><p class="tip">The four black corner squares on the new template are registration markers. They let the app straighten and scale each photo before it reads the graphite.</p></div>
+ <div class="card"><h3>Scanner status</h3><div id="cvStatus" class="status">Loading computer vision…</div><div class="row" style="margin-top:8px"><button id="retryCv" class="btn alt" style="display:none">Retry computer vision</button></div><p class="tip">The four black corner squares on the new template are registration markers. They let the app straighten and scale each photo before it reads the graphite.</p></div>
 </section>
 
 <section id="assessment" class="page">
@@ -208,7 +231,22 @@ $('startCamera').onclick=startCamera;$('stopCamera').onclick=stopCamera;
 function resetScan(){stopCamera();$('photo').value='';$('previewWrap').style.display='none';$('resultCard').style.display='none';$('scanStatus').innerHTML='Tap <b>Live Scan</b> and hold the sheet inside the frame. The app will scan automatically when all four corner markers are visible.';$('indexScanStatus').textContent='Index number: not scanned yet.';workingAnswers={};workingScores={};$('studentName').value='';$('studentIndex').value=''}
 
 function cvLoaded(){return !!(window.cv&&window.cv.Mat)}
-setInterval(()=>{$('cvStatus').innerHTML=cvLoaded()?'<span class="ok">✓ Computer vision ready.</span>':'Loading computer vision…'},700);
+let cvWaitStarted=Date.now();
+function updateCvStatus(){
+ if(cvLoaded()){
+   $('cvStatus').innerHTML='<span class="ok">✓ Computer vision ready.</span>';
+   $('retryCv').style.display='none';
+ }else if(window.cvLoadFailed || Date.now()-cvWaitStarted>12000){
+   $('cvStatus').innerHTML='<span class="bad">Computer vision did not load.</span> Tap Retry. If it still fails, open this page in Safari instead of the in-app browser.';
+   $('retryCv').style.display='inline-block';
+ }else{
+   $('cvStatus').textContent='Loading computer vision…';
+ }
+}
+setInterval(updateCvStatus,700);
+$('retryCv').onclick=()=>{
+ window.cvLoadFailed=false;cvWaitStarted=Date.now();$('retryCv').style.display='none';$('cvStatus').textContent='Retrying computer vision…';loadOpenCV();
+};
 
 function findMarkers(src){
  let gray=new cv.Mat(),bin=new cv.Mat(),contours=new cv.MatVector(),hier=new cv.Mat();
