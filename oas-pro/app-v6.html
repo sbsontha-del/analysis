@@ -6,8 +6,17 @@ fetch('app-v5.html?base=6').then(r=>r.text()).then(html=>{
  const oldRender=`function renderVerify(){let a=currentAss(),det=0,blank=0,correct=0,total=0;$('verify').innerHTML='';`;
  const newRender=`function renderVerify(){try{localStorage.setItem('oaspro_last_scan_draft',JSON.stringify({assessmentId:currentId,index:$('studentIndex').value.trim(),name:$('studentName').value.trim(),answers:{...workingAnswers},ts:new Date().toISOString()}))}catch(e){}let a=currentAss(),det=0,blank=0,correct=0,total=0;$('verify').innerHTML='';`;
  if(html.includes(oldRender)) html=html.replace(oldRender,newRender);
+
+ const oldLo=`<div class="card"><h3>Learning Objectives</h3><p class="tip">Enter an LO/topic beside each question.</p><div id="loGrid" class="keygrid"></div></div>`;
+ const newLo=`<div class="card"><h3>Learning Objectives / Topics</h3><p class="tip">Paste the topics in question order, one per line (Q1, Q2, Q3 …), then tap Apply Topic List. You can still edit individual questions below.</p><textarea id="quickLo" placeholder="Example:\nLife cycles\nPlant growth\nPlant parts and functions"></textarea><button id="applyLo" class="btn alt">Apply Topic List</button><div id="loGrid" class="keygrid" style="margin-top:12px"></div></div>`;
+ if(html.includes(oldLo)) html=html.replace(oldLo,newLo);
+
+ const hook=`$('analysisAss').onchange=renderAnalysis;`;
+ const loHandler=`$('applyLo').onclick=()=>{let a=currentAss();if(!a){a=blankAss();assessments.push(a);currentId=a.id}let lines=$('quickLo').value.replace(/\\r/g,'').split('\\n').map(x=>x.trim());for(let i=0;i<Math.min(60,lines.length);i++){if(lines[i])a.lo[i+1]=lines[i]}persist();};`;
+ if(html.includes(hook)) html=html.replace(hook,loHandler+hook);
+
  html=html.replace('<title>OAS Pro v5</title>','<title>OAS Pro v6</title>');
- html=html.replace('Self-calibrating bubble grid · strict OAS recognition · graphite scanning · LO analysis','Self-calibrating scanner · verified scan saving · LO analysis');
+ html=html.replace('Self-calibrating bubble grid · strict OAS recognition · graphite scanning · LO analysis','Self-calibrating scanner · verified scan saving · bulk LO/topic entry');
  document.open();document.write(html);document.close();
 }).catch(e=>{document.body.innerHTML='<p style="font-family:sans-serif;padding:20px;color:#b91c1c">Could not load OAS Pro: '+e.message+'</p>'});
 </script></body></html>
