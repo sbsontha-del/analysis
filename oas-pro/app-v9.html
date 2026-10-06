@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OAS Pro</title></head><body><p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:20px">Loading OAS Pro…</p><script>
+fetch('app-v7.html?edit=9').then(r=>r.text()).then(src=>{
+  const uiPatch=`  html=html.replace('<select id="assSelect" style="max-width:320px"></select>','<select id="assSelect" style="max-width:320px"></select><button id="editAss" class="btn alt">✏️ Edit selected</button><span id="editStatus" class="tip" style="width:100%"></span>');\n`;
+  src=src.replace('  const patch=`<script>',uiPatch+'  const patch=`<script>');
+  const behavior=`\n  if($('editAss')){\n    $('editAss').onclick=()=>{\n      const id=$('assSelect').value;\n      if(!id)return alert('Select an assessment first.');\n      currentId=id;\n      try{localStorage.setItem('oaspro_current',currentId)}catch(e){}\n      loadAss();\n      const a=currentAss();\n      if($('editStatus'))$('editStatus').innerHTML='<span class="ok">Editing <b>'+esc(a?.name||'assessment')+'</b>. Change the name, subject, number of questions, answer key, LO/topic or marks, then tap <b>Save assessment</b>.</span>';\n      window.scrollTo({top:0,behavior:'smooth'});\n    };\n  }\n`;
+  src=src.replace('  refresh();\n})();',behavior+'\n  refresh();\n})();');
+  src=src.replace("<title>OAS Pro</title>","<title>OAS Pro v9</title>");
+  document.open();document.write(src);document.close();
+}).catch(e=>{document.body.innerHTML='<p style="font-family:sans-serif;padding:20px;color:#b91c1c">Could not load OAS Pro: '+e.message+'</p>'});
+</script></body></html>
