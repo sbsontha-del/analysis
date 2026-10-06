@@ -1,22 +1,139 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OAS Pro</title></head><body><p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:20px">Loading OAS Pro…</p><script>
-fetch('app-v5.html?base=6').then(r=>r.text()).then(html=>{
- const oldSave=`$('saveScan').onclick=()=>{let a=currentAss();if(!a)return;let correct=0,total=0;for(let q=1;q<=60;q++)if(/^[1-4]$/.test(a.key?.[q]||'')){total++;if(String(workingAnswers[q])===String(a.key[q]))correct++}scans.push({id:uid(),assessmentId:a.id,index:$('studentIndex').value.trim(),name:$('studentName').value.trim(),answers:{...workingAnswers},score:correct,total,ts:new Date().toISOString()});persist();alert('Pupil result saved.');go('class')}`;
- const newSave=`$('saveScan').onclick=()=>{let a=currentAss();if(!a)return alert('Select an assessment first.');let correct=0,total=0;for(let q=1;q<=60;q++)if(/^[1-4]$/.test(a.key?.[q]||'')){total++;if(String(workingAnswers[q])===String(a.key[q]))correct++}let idx=$('studentIndex').value.trim(),name=$('studentName').value.trim(),rec={id:uid(),assessmentId:a.id,index:idx,name,answers:{...workingAnswers},score:correct,total,ts:new Date().toISOString()};try{let fresh=JSON.parse(localStorage.getItem('oaspro_scans')||'[]');let pos=idx?fresh.findIndex(x=>x.assessmentId===a.id&&String(x.index||'')===idx):-1;if(pos>=0){rec.id=fresh[pos].id;fresh[pos]=rec}else fresh.push(rec);localStorage.setItem('oaspro_scans',JSON.stringify(fresh));localStorage.setItem('oaspro_last_scan',JSON.stringify(rec));let check=JSON.parse(localStorage.getItem('oaspro_scans')||'[]');if(!check.some(x=>x.id===rec.id))throw new Error('Storage verification failed');scans=check;$('scanStatus').innerHTML='<span class="ok">✓ Result saved permanently in this browser.</span>';refresh();alert('Pupil result saved.');go('class')}catch(e){$('scanStatus').innerHTML='<span class="bad">Could not save result: '+esc(e.message)+'</span>';alert('The result could not be stored. Please keep this page open and try again.')}}`;
- if(html.includes(oldSave)) html=html.replace(oldSave,newSave);
- const oldRender=`function renderVerify(){let a=currentAss(),det=0,blank=0,correct=0,total=0;$('verify').innerHTML='';`;
- const newRender=`function renderVerify(){try{localStorage.setItem('oaspro_last_scan_draft',JSON.stringify({assessmentId:currentId,index:$('studentIndex').value.trim(),name:$('studentName').value.trim(),answers:{...workingAnswers},ts:new Date().toISOString()}))}catch(e){}let a=currentAss(),det=0,blank=0,correct=0,total=0;$('verify').innerHTML='';`;
- if(html.includes(oldRender)) html=html.replace(oldRender,newRender);
+fetch('app-v5.html?base=7').then(r=>r.text()).then(html=>{
+  html=html.replace('<title>OAS Pro v5</title>','<title>OAS Pro v7</title>');
+  html=html.replace('Self-calibrating bubble grid · strict OAS recognition · graphite scanning · LO analysis','Self-calibrating scanner · assessment-aware marking · LO analysis');
+  html=html.replace(
+    '<div class="grid g2"><input id="assName" placeholder="Assessment name"><input id="assSubject" placeholder="Subject / class"></div>',
+    '<div class="grid g2"><input id="assName" placeholder="Assessment name"><input id="assSubject" placeholder="Subject / class"><div><label style="font-size:13px;font-weight:800">Number of questions</label><input id="assQuestionCount" type="number" min="1" max="60" value="30" placeholder="30"></div></div>'
+  );
+  const patch=`<script>
+(function(){
+  function qCount(a){
+    const n=Number(a&&a.questionCount);
+    return Number.isInteger(n)&&n>=1&&n<=60?n:30;
+  }
+  window.assessmentQuestionCount=qCount;
 
- const oldLo=`<div class="card"><h3>Learning Objectives</h3><p class="tip">Enter an LO/topic beside each question.</p><div id="loGrid" class="keygrid"></div></div>`;
- const newLo=`<div class="card"><h3>Learning Objectives / Topics</h3><p class="tip">Paste the topics in question order, one per line (Q1, Q2, Q3 …), then tap Apply Topic List. You can still edit individual questions below.</p><textarea id="quickLo" placeholder="Example:\nLife cycles\nPlant growth\nPlant parts and functions"></textarea><button id="applyLo" class="btn alt">Apply Topic List</button><div id="loGrid" class="keygrid" style="margin-top:12px"></div></div>`;
- if(html.includes(oldLo)) html=html.replace(oldLo,newLo);
+  // Legacy assessments created before question-count support default to 30.
+  if(currentAss() && !currentAss().questionCount){
+    currentAss().questionCount=30;
+    try{localStorage.setItem('oaspro_assessments',JSON.stringify(assessments));}catch(e){}
+  }
 
- const hook=`$('analysisAss').onchange=renderAnalysis;`;
- const loHandler=`$('applyLo').onclick=()=>{let a=currentAss();if(!a){a=blankAss();assessments.push(a);currentId=a.id}let lines=$('quickLo').value.replace(/\\r/g,'').split('\\n').map(x=>x.trim());for(let i=0;i<Math.min(60,lines.length);i++){if(lines[i])a.lo[i+1]=lines[i]}persist();};`;
- if(html.includes(hook)) html=html.replace(hook,loHandler+hook);
+  buildKey=function(a){
+    $('keyGrid').innerHTML='';$('loGrid').innerHTML='';
+    const max=qCount(a);
+    for(let q=1;q<=max;q++){
+      let d=document.createElement('div');d.className='keycell';
+      d.innerHTML='<b>Q'+q+'</b><div class="choices">'+[1,2,3,4].map(n=>'<button data-kq="'+q+'" data-ka="'+n+'" class="'+(String(a?.key?.[q]||'')===String(n)?'sel':'')+'">'+n+'</button>').join('')+'</div>';
+      $('keyGrid').appendChild(d);
+      let l=document.createElement('div');l.className='keycell';
+      l.innerHTML='<b>Q'+q+'</b><input data-loq="'+q+'" value="'+esc(a?.lo?.[q]||'')+'" placeholder="LO / topic">';
+      $('loGrid').appendChild(l);
+    }
+    document.querySelectorAll('[data-kq]').forEach(b=>b.onclick=()=>{let a=currentAss();if(!a)return;a.key[b.dataset.kq]=b.dataset.ka;buildKey(a)});
+  };
 
- html=html.replace('<title>OAS Pro v5</title>','<title>OAS Pro v6</title>');
- html=html.replace('Self-calibrating bubble grid · strict OAS recognition · graphite scanning · LO analysis','Self-calibrating scanner · verified scan saving · bulk LO/topic entry');
- document.open();document.write(html);document.close();
+  loadAss=function(){
+    let a=currentAss();
+    $('assName').value=a?.name||'';
+    $('assSubject').value=a?.subject||'';
+    if($('assQuestionCount')) $('assQuestionCount').value=qCount(a);
+    buildKey(a);
+  };
+
+  $('saveAss').onclick=()=>{
+    let a=currentAss();if(!a){a=blankAss();assessments.push(a);currentId=a.id}
+    a.name=$('assName').value.trim()||'Untitled assessment';
+    a.subject=$('assSubject').value.trim();
+    a.questionCount=Math.max(1,Math.min(60,parseInt($('assQuestionCount').value||'30',10)||30));
+    document.querySelectorAll('[data-loq]').forEach(i=>a.lo[i.dataset.loq]=i.value.trim());
+    // Remove stale key/LO entries outside this assessment framework.
+    Object.keys(a.key||{}).forEach(k=>{if(Number(k)>a.questionCount)delete a.key[k]});
+    Object.keys(a.lo||{}).forEach(k=>{if(Number(k)>a.questionCount)delete a.lo[k]});
+    persist();alert('Assessment saved. '+a.questionCount+' questions will be marked.');
+  };
+
+  $('applyKey').onclick=()=>{
+    let a=currentAss();if(!a){a=blankAss();assessments.push(a);currentId=a.id}
+    a.questionCount=Math.max(1,Math.min(60,parseInt($('assQuestionCount').value||'30',10)||30));
+    let v=$('quickKey').value.trim().split(/[\\s,;|]+/).filter(Boolean);
+    a.key={};
+    v.slice(0,a.questionCount).forEach((x,i)=>{if(/^[1-4]$/.test(x))a.key[i+1]=x});
+    persist();
+  };
+
+  renderVerify=function(){
+    try{localStorage.setItem('oaspro_last_scan_draft',JSON.stringify({assessmentId:currentId,index:$('studentIndex').value.trim(),name:$('studentName').value.trim(),answers:{...workingAnswers},ts:new Date().toISOString()}))}catch(e){}
+    let a=currentAss(),det=0,blank=0,correct=0,total=qCount(a);$('verify').innerHTML='';
+    for(let q=1;q<=total;q++){
+      let v=workingAnswers[q]||'-';if(v==='-')blank++;else det++;
+      if(/^[1-4]$/.test(a?.key?.[q]||'')&&v===String(a.key[q]))correct++;
+      let d=document.createElement('div');d.className='q';
+      d.innerHTML='<b>Q'+q+'</b><div class="choices">'+[1,2,3,4].map(n=>'<button data-vq="'+q+'" data-va="'+n+'" class="'+(v===String(n)?'sel':'')+'">'+n+'</button>').join('')+'<button data-vq="'+q+'" data-va="-" class="'+(v==='-'?'sel':'')+'">B</button></div>';
+      $('verify').appendChild(d);
+    }
+    document.querySelectorAll('[data-vq]').forEach(b=>b.onclick=()=>{workingAnswers[b.dataset.vq]=b.dataset.va;renderVerify()});
+    $('detectedN').textContent=det;$('blankN').textContent=blank;
+    const complete=Array.from({length:total},(_,i)=>i+1).every(q=>/^[1-4]$/.test(a?.key?.[q]||''));
+    $('scoreN').textContent=complete?correct+'/'+total:'Key incomplete';
+    $('resultCard').style.display='block';
+  };
+
+  $('saveScan').onclick=()=>{
+    let a=currentAss();if(!a)return alert('Select an assessment first.');
+    let total=qCount(a),correct=0,missing=[];
+    for(let q=1;q<=total;q++){
+      if(!/^[1-4]$/.test(a.key?.[q]||'')){missing.push(q);continue}
+      if(String(workingAnswers[q])===String(a.key[q]))correct++;
+    }
+    if(missing.length)return alert('Answer key is incomplete. Please set answers for Q'+missing.join(', Q')+'.');
+    let idx=$('studentIndex').value.trim(),name=$('studentName').value.trim();
+    let clean={};for(let q=1;q<=total;q++)clean[q]=workingAnswers[q]||'-';
+    let rec={id:uid(),assessmentId:a.id,index:idx,name,answers:clean,score:correct,total,ts:new Date().toISOString()};
+    try{
+      let fresh=JSON.parse(localStorage.getItem('oaspro_scans')||'[]');
+      let pos=idx?fresh.findIndex(x=>x.assessmentId===a.id&&String(x.index||'')===idx):-1;
+      if(pos>=0){rec.id=fresh[pos].id;fresh[pos]=rec}else fresh.push(rec);
+      localStorage.setItem('oaspro_scans',JSON.stringify(fresh));localStorage.setItem('oaspro_last_scan',JSON.stringify(rec));
+      scans=fresh;$('scanStatus').innerHTML='<span class="ok">✓ Result saved. Marked '+total+' questions.</span>';refresh();alert('Pupil result saved: '+correct+'/'+total);go('class');
+    }catch(e){$('scanStatus').innerHTML='<span class="bad">Could not save result: '+esc(e.message)+'</span>'}
+  };
+
+  renderAnalysis=function(){
+    let aid=$('analysisAss')?.value||currentId,a=assessments.find(x=>x.id===aid),rows=scans.filter(s=>s.assessmentId===aid);
+    $('cPupils').textContent=rows.length;$('resultsBody').innerHTML='';$('heat').innerHTML='';$('loAnalysis').innerHTML='';
+    const max=qCount(a);
+    if(!a||!rows.length){$('cAvg').textContent='—';$('cHard').textContent='—';for(let q=1;q<=max;q++)$('heat').innerHTML+='<div>Q'+q+'<br>—</div>';return}
+    let avg=rows.reduce((s,r)=>s+(r.total?r.score/r.total:0),0)/rows.length;$('cAvg').textContent=Math.round(avg*100)+'%';
+    let qs={};for(let q=1;q<=max;q++)qs[q]={ok:0,n:0};
+    for(let r of rows)for(let q=1;q<=max;q++)if(/^[1-4]$/.test(a.key?.[q]||'')){qs[q].n++;if(String(r.answers[q])===String(a.key[q]))qs[q].ok++}
+    let hard=Object.keys(qs).filter(q=>qs[q].n).sort((x,y)=>(qs[x].ok/qs[x].n)-(qs[y].ok/qs[y].n))[0];$('cHard').textContent=hard?'Q'+hard:'—';
+    for(let q=1;q<=max;q++){let s=qs[q],p=s.n?Math.round(s.ok/s.n*100):null;$('heat').innerHTML+='<div>Q'+q+'<br>'+(p===null?'—':p+'%')+'</div>'}
+    for(let r of rows){let tr=document.createElement('tr');tr.innerHTML='<td>'+esc(r.index||'—')+'</td><td>'+esc(r.name||'—')+'</td><td>'+r.score+'/'+r.total+'</td><td>'+(r.total?Math.round(r.score/r.total*100):0)+'%</td><td><button class="btn alt" data-slip="'+r.id+'">Print Slip</button></td>';$('resultsBody').appendChild(tr)}
+    document.querySelectorAll('[data-slip]').forEach(b=>b.onclick=()=>openSlip(b.dataset.slip,a));
+    let los={};for(let q=1;q<=max;q++){let lo=a.lo?.[q];if(!lo)continue;if(!los[lo])los[lo]={ok:0,n:0};for(let r of rows)if(/^[1-4]$/.test(a.key?.[q]||'')){los[lo].n++;if(String(r.answers[q])===String(a.key[q]))los[lo].ok++}}
+    $('loAnalysis').innerHTML=Object.keys(los).length?Object.entries(los).map(([lo,s])=>'<div class="status"><b>'+esc(lo)+'</b>: '+s.ok+'/'+s.n+' ('+Math.round(s.ok/s.n*100)+'%)</div>').join(''):'<div class="tip">No LO mapping saved.</div>';
+  };
+
+  openSlip=function(id,a){
+    let r=scans.find(x=>x.id===id),max=qCount(a);$('slipTitle').textContent=a.name||'Assessment Result';$('slipName').textContent=r.name||'—';$('slipIndex').textContent=r.index||'—';$('slipScore').textContent=r.score+'/'+r.total+' ('+(r.total?Math.round(r.score/r.total*100):0)+'%)';
+    let los={};for(let q=1;q<=max;q++){let lo=(a.lo?.[q]||'').trim();if(!lo)continue;if(!los[lo])los[lo]={qs:[],ok:0,n:0};los[lo].qs.push(q);if(/^[1-4]$/.test(a.key?.[q]||'')){los[lo].n++;if(String(r.answers[q])===String(a.key[q]))los[lo].ok++}}
+    $('slipLo').innerHTML=Object.keys(los).length?Object.entries(los).map(([lo,s])=>'<tr><td>'+esc(lo)+'</td><td>'+s.qs.join(', ')+'</td><td>'+s.ok+'/'+s.n+'</td><td>'+Math.round(s.ok/s.n*100)+'%</td></tr>').join(''):'<tr><td colspan="4">No LO mapping.</td></tr>';
+    let wrong=[];for(let q=1;q<=max;q++)if(/^[1-4]$/.test(a.key?.[q]||'')&&String(r.answers[q])!==String(a.key[q]))wrong.push(q);$('slipNotes').innerHTML=wrong.length?'<b>Questions to review:</b> '+wrong.join(', '):'All mapped questions correct.';$('slipModal').classList.add('open');
+  };
+
+  $('exportCsv').onclick=()=>{
+    let aid=$('analysisAss').value||currentId,a=assessments.find(x=>x.id===aid),rows=scans.filter(s=>s.assessmentId===aid);if(!a||!rows.length)return alert('No results to export.');
+    let max=qCount(a),lines=[['Index','Name',...Array.from({length:max},(_,i)=>'Q'+(i+1)),'Score','Total','Percent'].join(',')];
+    rows.forEach(r=>{let v=[r.index||'',r.name||'',...Array.from({length:max},(_,i)=>r.answers[i+1]||''),r.score,r.total,r.total?Math.round(r.score/r.total*100):0];lines.push(v.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(','))});
+    let blob=new Blob([lines.join('\\n')],{type:'text/csv'}),u=URL.createObjectURL(blob),ael=document.createElement('a');ael.href=u;ael.download=(a.name||'OAS-results').replace(/[^a-z0-9]+/gi,'_')+'.csv';ael.click();setTimeout(()=>URL.revokeObjectURL(u),1000);
+  };
+
+  refresh();
+})();
+<\/script>`;
+  html=html.replace('</body>',patch+'</body>');
+  document.open();document.write(html);document.close();
 }).catch(e=>{document.body.innerHTML='<p style="font-family:sans-serif;padding:20px;color:#b91c1c">Could not load OAS Pro: '+e.message+'</p>'});
 </script></body></html>
